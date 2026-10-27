@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/image_saver.dart';
+
 /// Full-screen image viewer with pinch zoom and swipe between images.
 class PhotoViewPage extends StatefulWidget {
   const PhotoViewPage({super.key, required this.urls, this.initialIndex = 0});
@@ -70,6 +72,26 @@ class _PhotoViewPageState extends State<PhotoViewPage> {
                   style: const TextStyle(color: Colors.white70),
                 ),
                 const SizedBox(width: 8),
+                IconButton(
+                  tooltip: '保存图片',
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('正在保存…')),
+                    );
+                    try {
+                      final file = await ImageSaver.save(widget.urls[_index]);
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('已保存到 ${file.path}')),
+                      );
+                    } catch (e) {
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('保存失败：$e')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.download, color: Colors.white),
+                ),
                 IconButton(
                   tooltip: '复制图片链接',
                   onPressed: () async {

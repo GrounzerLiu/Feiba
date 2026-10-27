@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/models/thread_page.dart';
-import '../data/tieba_repository.dart';
 import '../data/models/tieba_user.dart';
+import '../data/tieba_repository.dart';
 import 'widgets/content_view.dart';
 
 class ThreadPage extends StatefulWidget {
@@ -20,6 +20,9 @@ class _ThreadPageState extends State<ThreadPage> {
   final ScrollController _scroll = ScrollController();
 
   final List<PostItem> _posts = <PostItem>[];
+  final Map<int, List<SubPost>> _expandedSubs = <int, List<SubPost>>{};
+  final Set<int> _subLoading = <int>{};
+
   Map<int, TiebaUser> _users = const <int, TiebaUser>{};
   int _page = 1;
   bool _loading = false;
@@ -57,6 +60,7 @@ class _ThreadPageState extends State<ThreadPage> {
         _page = 1;
         _hasMore = true;
         _posts.clear();
+        _expandedSubs.clear();
       }
     });
     try {
@@ -74,6 +78,34 @@ class _ThreadPageState extends State<ThreadPage> {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Loads every page of sub posts (楼中楼) for [post].
+  Future<void> _expandSubs(PostItem post) async {
+    if (_subLoading.contains(post.id)) return;
+    setState(() => _subLoading.add(post.id));
+    final collected = <int, SubPost>{};
+    try {
+      var pn = 1;
+      var more = true;
+      while (more && pn <= 10) {
+        final page = await _repo.subPosts(tid: widget.tid, pid: post.id, pn: pn);
+        for (final sub in page.posts) {
+          collected[sub.id] = sub;
+        }
+        more = page.hasMore && page.posts.isNotEmpty;
+        pn += 1;
+      }
+      if (!mounted) return;
+      setState(() => _expandedSubs[post.id] = collected.values.toList());
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('加载楼中楼失败：$e')),
+      );
+    } finally {
+      if (mounted) setState(() => _subLoading.remove(post.id));
     }
   }
 
@@ -124,17 +156,36 @@ class _ThreadPageState extends State<ThreadPage> {
           );
         }
         final post = _posts[index];
-        return _PostTile(post: post, author: _users[post.authorId]);
+        final expanded = _expandedSubs[post.id];
+        return _PostTile(
+          post: post,
+          author: _users[post.authorId],
+          subs: expanded ?? post.subPosts,
+          loadingSubs: _subLoading.contains(post.id),
+          onExpand: expanded == null &&
+                  (post.subPostNumber > 0 || post.subPosts.isNotEmpty)
+              ? () => _expandSubs(post)
+              : null,
+        );
       },
     );
   }
 }
 
 class _PostTile extends StatelessWidget {
-  const _PostTile({required this.post, this.author});
+  const _PostTile({
+    required this.post,
+    this.author,
+    this.subs = const <SubPost>[],
+    this.loadingSubs = false,
+    this.onExpand,
+  });
 
   final PostItem post;
   final TiebaUser? author;
+  final List<SubPost> subs;
+  final bool loadingSubs;
+  final VoidCallback? onExpand;
 
   @override
   Widget build(BuildContext context) {
@@ -149,9 +200,8 @@ class _PostTile extends StatelessWidget {
               CircleAvatar(
                 radius: 14,
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                backgroundImage: author?.avatarUrl != null
-                    ? NetworkImage(author!.avatarUrl!)
-                    : null,
+                backgroundImage:
+                    author?.avatarUrl != null ? NetworkImage(author!.avatarUrl!) : null,
                 child: author?.avatarUrl == null
                     ? Text(
                         (author?.displayName ?? '?').characters.first,
@@ -173,7 +223,7 @@ class _PostTile extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           ContentView(nodes: post.content),
-          if (post.subPosts.isNotEmpty) ...<Widget>[
+          if (subs.isNotEmpty) ...<Widget>[
             const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
@@ -183,29 +233,56 @@ class _PostTile extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: post.subPosts.take(3).map((sub) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: ContentView(
-                      nodes: sub.content,
-                      style: theme.textTheme.bodySmall,
-                      maxImages: 0,
+                children: <Widget>[
+                  for (final sub in subs)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          if (sub.authorName != null && sub.authorName!.isNotEmpty)
+                            Text(
+                              sub.authorName!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ContentView(
+                            nodes: sub.content,
+                            style: theme.textTheme.bodySmall,
+                            maxImages: 0,
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                }).toList(),
+                ],
               ),
             ),
-            if (post.subPostNumber > post.subPosts.length)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
+          ],
+          if (loadingSubs)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else if (onExpand != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: InkWell(
+                onTap: onExpand,
                 child: Text(
-                  '共 ${post.subPostNumber} 条回复',
+                  post.subPostNumber > 0
+                      ? '共 ${post.subPostNumber} 条回复，点击查看全部'
+                      : '查看楼中楼',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.primary,
                   ),
                 ),
               ),
-          ],
+            ),
         ],
       ),
     );

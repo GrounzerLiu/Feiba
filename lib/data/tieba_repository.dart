@@ -66,6 +66,58 @@ class TiebaRepository {
         .toList(growable: false);
   }
 
+  /// Loads one page of sub posts (楼中楼) for a floor.
+  Future<SubPostPage> subPosts({
+    required int tid,
+    required int pid,
+    int pn = 1,
+    int rn = 20,
+  }) async {
+    final json = await client.post('/c/f/pb/floor', <String, String>{
+      'kz': '$tid',
+      'pid': '$pid',
+      'pn': '$pn',
+      'rn': '$rn',
+      'scr_dip': '2.75',
+      'scr_h': '2400',
+      'scr_w': '1080',
+    });
+    final list = _list(json['subpost_list'])
+        .whereType<Map>()
+        .map((e) => SubPost.fromJson(e.cast<String, dynamic>()))
+        .toList(growable: false);
+    final page = json['page'];
+    final total = _int(json['subpost_num']);
+    // `subpost_num` is the server's idea of the floor size and can exceed the
+    // number of actually returned items (deleted replies are counted), so a
+    // full page is the only reliable signal that more data exists.
+    final hasMore =
+        list.length >= rn || (page is Map && _int(page['has_more']) != 0);
+    return SubPostPage(
+      posts: list,
+      total: total,
+      hasMore: hasMore,
+    );
+  }
+
+  /// Raw sub-post (floor) response, used by the thread page to load replies.
+  Future<Map<String, dynamic>> rawFloor({
+    required int kz,
+    required int pid,
+    int pn = 1,
+    int rn = 20,
+  }) {
+    return client.post('/c/f/pb/floor', <String, String>{
+      'kz': '$kz',
+      'pid': '$pid',
+      'pn': '$pn',
+      'rn': '$rn',
+      'scr_dip': '2.75',
+      'scr_h': '2400',
+      'scr_w': '1080',
+    });
+  }
+
   /// Validates a BDUSS and returns the bound account, or null when invalid.
   Future<TiebaAccount?> checkAccount(String bduss) => client.fetchAccount(bduss);
 
