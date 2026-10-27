@@ -111,6 +111,12 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final loggedIn = Session.instance.isLoggedIn;
+    final followed = LocalLibrary.instance.followedForums;
+    final shortcuts = <_HotForum>[
+      for (final name in followed)
+        _HotForum(name, '已关注', theme.colorScheme.primary, Icons.star_rounded),
+      ..._hotForums.where((forum) => !followed.contains(forum.name)),
+    ];
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: _load,
@@ -201,10 +207,10 @@ class _HomePageState extends State<HomePage> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: _hotForums.length,
+                  itemCount: shortcuts.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (context, index) {
-                    final forum = _hotForums[index];
+                    final forum = shortcuts[index];
                     return _ForumShortcut(
                       forum: forum,
                       onTap: () => _openForum(forum.name),
@@ -455,15 +461,78 @@ class _ThreadSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final line = theme.colorScheme.surfaceContainerHighest;
     return Column(
       children: <Widget>[
         for (var i = 0; i < 3; i++)
           Container(
             margin: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-            height: 150,
+            padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: line,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Container(
+                      width: 112,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: line,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 48,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: line.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: line,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 190,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: line.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    color: line.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
