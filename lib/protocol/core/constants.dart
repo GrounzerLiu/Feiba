@@ -12,6 +12,11 @@ class TiebaConstants {
   /// (notably thread list and post list).
   static const String legacyVersion = '12.64.1.1';
 
+  /// Client version for the user reply-history endpoint.
+  ///
+  /// aiotieba pins this endpoint to a completely separate old version.
+  static const String userPostsVersion = '8';
+
   /// Mobile app API host.
   static const String appBaseHost = 'tiebac.baidu.com';
 

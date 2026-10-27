@@ -1,4 +1,4 @@
-import 'dart:convert';
+import '../core/encoding.dart';
 
 import '../core/http_core.dart';
 import '../models/bawu_blacklist.dart';
@@ -54,5 +54,5 @@ Future<BawuBlacklistUsers> fetchBawuBlacklist(
     '/bawu2/platform/listBlackUser',
     query: <String, String>{'word': fname, 'pn': '$pn'},
   );
-  return BawuBlacklistUsers.fromHtml(utf8.decode(bytes, allowMalformed: true));
+  return BawuBlacklistUsers.fromHtml(decodeHtmlBytes(bytes));
 }

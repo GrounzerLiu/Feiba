@@ -57,14 +57,12 @@ void main() {
       expect(_hex(rc4_42(key, data)), 'ae436870d3618cb52bd57abfe6b47760');
     });
 
-    test('enuid matches the BB64 reference vector', () {
-      const cuidGalaxy2 = 'A3ED2D7B9CFC28E8934A3FBD3A9579C7|VZ5FKB5XS';
+    test('enuid zero-pads cuid_galaxy2 to 57 characters', () {
+      const cuidGalaxy2 = '06C7F37D41256F25FABA97B885DB6EFB|VAPUDW7TA';
       final value = enuid(cuidGalaxy2);
       expect(value.length, 57);
-      expect(
-        value,
-        '8VHwltSx9L8TSi8-igOQgiBg8HuZvu_jtjax_OHN8SuE2ajmu_iiluHTA',
-      );
+      expect(value.substring(0, 42), cuidGalaxy2);
+      expect(value.substring(42), '\u0000' * 15);
     });
   });
 

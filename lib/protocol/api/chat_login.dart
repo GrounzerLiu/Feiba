@@ -16,7 +16,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
-import '../core/blcp/blcp_crypto.dart';
+import '../core/blcp_crypto.dart';
 import '../core/blcp/constants.dart';
 import '../core/blcp/core.dart';
 import '../core/blcp/enums.dart';

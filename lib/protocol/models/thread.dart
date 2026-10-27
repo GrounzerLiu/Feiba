@@ -171,17 +171,26 @@ class TiebaThread {
   DateTime get lastDateTime =>
       DateTime.fromMillisecondsSinceEpoch(lastTime * 1000);
 
-  factory TiebaThread.fromProto(pb.ThreadInfo proto) {
+  factory TiebaThread.fromProto(
+    pb.ThreadInfo proto, {
+    Contents? contentsOverride,
+    VoteInfo? voteInfoOverride,
+    ShareThread? shareOriginOverride,
+  }) {
     final user = TiebaUser.fromProtoOrNull(proto.author);
     final authorId = proto.authorId.toInt() != 0
         ? proto.authorId.toInt()
         : (user?.userId ?? 0);
-    final isShare = proto.isShareThread != 0;
+    var isShare = proto.isShareThread != 0;
+    if (isShare && proto.originThreadInfo.pid.toInt() == 0) {
+      // A share thread without an origin is not a share thread in aiotieba.
+      isShare = false;
+    }
     final pid = proto.firstPostId.toInt() != 0
         ? proto.firstPostId.toInt()
         : proto.postId.toInt();
     return TiebaThread(
-      contents: Contents.fromThread(proto),
+      contents: contentsOverride ?? Contents.fromThread(proto),
       title: proto.title,
       fid: proto.fid.toInt(),
       fname: proto.fname,
@@ -196,10 +205,10 @@ class TiebaThread {
       isShare: isShare,
       isHide: proto.isFrsMask != 0,
       isLivepost: proto.isLivepost != 0,
-      voteInfo: VoteInfo.fromProto(proto.pollInfo),
-      shareOrigin: isShare && proto.originThreadInfo.pid.toInt() != 0
-          ? ShareThread.fromProto(proto.originThreadInfo)
-          : null,
+      voteInfo: voteInfoOverride ?? VoteInfo.fromProto(proto.pollInfo),
+      shareOrigin:
+          shareOriginOverride ??
+          (isShare ? ShareThread.fromProto(proto.originThreadInfo) : null),
       viewNum: proto.viewNum,
       replyNum: proto.replyNum,
       shareNum: proto.shareNum,

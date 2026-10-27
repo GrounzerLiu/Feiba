@@ -1,5 +1,4 @@
-import 'dart:convert';
-
+import '../core/encoding.dart';
 import '../core/http_core.dart';
 import '../models/rank_users.dart';
 
@@ -17,5 +16,5 @@ Future<RankUsers> fetchRankUsers(
     '/f/like/furank',
     query: <String, String>{'kw': fname, 'pn': '$pn', 'ie': 'utf-8'},
   );
-  return RankUsers.fromHtml(utf8.decode(bytes, allowMalformed: true));
+  return RankUsers.fromHtml(decodeHtmlBytes(bytes));
 }

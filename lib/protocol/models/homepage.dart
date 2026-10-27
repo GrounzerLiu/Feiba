@@ -1,4 +1,6 @@
+import '../core/enums.dart';
 import 'contents.dart';
+import 'thread.dart';
 import 'user.dart';
 
 /// A thread shown on a user's homepage.
@@ -14,6 +16,10 @@ class HomepageThread {
     required this.replyNum,
     required this.agreeNum,
     required this.createTime,
+    this.type = ThreadType.unknown,
+    this.viewNum = 0,
+    this.shareNum = 0,
+    this.voteInfo,
   });
 
   final Contents contents;
@@ -26,6 +32,10 @@ class HomepageThread {
   final int replyNum;
   final int agreeNum;
   final int createTime;
+  final ThreadType type;
+  final int viewNum;
+  final int shareNum;
+  final VoteInfo? voteInfo;
 
   DateTime get dateTime =>
       DateTime.fromMillisecondsSinceEpoch(createTime * 1000);

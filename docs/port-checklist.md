@@ -6,9 +6,9 @@
 ## 覆盖统计
 
 - aiotieba API 模块：105 个（含 get_user_contents/profile 等子包）
-- Dart 手写协议文件：118 个，约 14,337 行
+- Dart 手写协议文件：119 个，约 14,551 行
 - protobuf schema：64 份；生成 Dart 文件：193 个
-- 协议测试：9 个文件 / 83 个用例
+- 协议测试：15 个文件 / 97 个用例
 - 额外核心目录：_classdef（共享模型语义）、_protobuf（schema）
 
 ## 模块清单
@@ -139,8 +139,8 @@
 
 ## 验证边界
 
-- 公开接口已用真实网络 smoke（吧、帖、楼层、楼中楼、搜索、用户资料、主页、排行、图片、crypto、zid、BAIDUID）。
+- 公开接口已用真实网络 smoke（吧、帖、楼层、楼中楼、搜索、用户资料、主页、排行/会员榜、粉丝、图片、crypto、zid、BAIDUID）；排行/会员/粉丝的中文解析已实测。
 - 需要 BDUSS/STOKEN 的接口与全部写操作：实现完成、编译通过、参数校验测试通过；未在仓库内用真实账号执行。
-- 聊天/BLCP/WS：编译与 28 个单测通过；无真实登录态，未做服务器联调。
+- 聊天/BLCP/WS：编译与 31 个单测通过；无真实登录态，未做服务器联调。
 - enuid 的服务器接受度未实测（仅 cloud-control 使用，失败会记录到 cloudControlError，不影响 IM 登录）。
-- uploadWsSec(full: true) 需要 zid/sampleId/baiduId，已由 init 流程补齐；未做真实 full 握手。
+- uploadWsSec(full: true) 需要 zid/sampleId/baiduId；`TiebaChatClient.initWebSocket(full: true)` 会先调用 sync/zid/baidu，未做真实 full 握手。

@@ -34,7 +34,7 @@ Future<TiebaPosts> fetchPosts(
   );
   data.kz = Int64(tid);
   data.pn = pn;
-  data.rn = rn;
+  data.rn = rn > 1 ? rn : 2;
   data.r = sort.value;
   data.lz = onlyThreadAuthor ? 1 : 0;
   if (withComments) {

@@ -1,5 +1,4 @@
-import 'dart:convert';
-
+import '../core/encoding.dart';
 import '../core/http_core.dart';
 import '../models/rank_forums.dart';
 
@@ -22,5 +21,5 @@ Future<RankForums> fetchRankForums(
       'ie': 'utf-8',
     },
   );
-  return RankForums.fromHtml(utf8.decode(bytes, allowMalformed: true));
+  return RankForums.fromHtml(decodeHtmlBytes(bytes));
 }

@@ -1,11 +1,13 @@
 import 'package:fixnum/fixnum.dart';
 
 import '../core/constants.dart';
+import '../core/enums.dart';
 import '../core/exceptions.dart';
 import '../core/http_core.dart';
 import '../generated/generated.dart' as pb;
 import '../models/contents.dart';
 import '../models/homepage.dart';
+import '../models/thread.dart';
 import 'get_user_info.dart';
 import '_common.dart';
 
@@ -37,7 +39,12 @@ Future<TiebaHomepage> fetchHomepage(
   for (final post in response.data.postList) {
     final contents = post.firstPostContent.isEmpty
         ? Contents.empty()
-        : Contents.fromContentList(post.firstPostContent);
+        : Contents.fromSummary(
+            post.firstPostContent,
+            media: post.media,
+            videoInfo: post.videoInfo,
+            voiceInfo: post.voiceInfo,
+          );
     threads.add(
       HomepageThread(
         contents: contents,
@@ -50,6 +57,10 @@ Future<TiebaHomepage> fetchHomepage(
         replyNum: post.replyNum,
         agreeNum: post.agree.agreeNum.toInt(),
         createTime: post.createTime,
+        type: ThreadType.fromValue(post.threadType.toInt()),
+        viewNum: post.freqNum,
+        shareNum: post.shareNum,
+        voteInfo: VoteInfo.fromProto(post.pollInfo),
       ),
     );
   }

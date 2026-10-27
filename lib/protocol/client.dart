@@ -765,7 +765,7 @@ class TiebaClient {
     int userId, {
     int pn = 1,
     int rn = 20,
-    String version = TiebaConstants.latestVersion,
+    String version = TiebaConstants.userPostsVersion,
   }) => fetchUserPosts(_http, userId: userId, pn: pn, rn: rn, version: version);
 
   Future<PcUserPosts> getPcUserPosts(
@@ -900,10 +900,10 @@ class TiebaClient {
     return TiebaSessionInfo(userName: parseString(json['user_name']), tbs: tbs);
   }
 
-  void close() {
+  Future<void> close() async {
     final chat = _chat;
     if (chat != null) {
-      chat.close();
+      await chat.close();
     }
     _http.close();
   }

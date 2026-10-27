@@ -62,8 +62,8 @@ class TiebaAccount {
 
   set uuid(String value) => _uuid = value;
 
-  String get clientId => _clientId ??=
-      'wappc_${DateTime.now().millisecondsSinceEpoch}_${100 + _random.nextInt(900)}';
+  /// Empty until [fetchSync] fills it, matching aiotieba's lazy account.
+  String get clientId => _clientId ?? '';
 
   set clientId(String value) => _clientId = value;
 
@@ -104,7 +104,10 @@ class TiebaAccount {
   int userId = 0;
   int tiebaUid = 0;
   String? userName;
+  String? nickName;
   String? portrait;
+  bool isVip = false;
+  int glevel = 0;
 
   Uint8List? _wsSecKey;
   Uint8List? _zidSecKey;

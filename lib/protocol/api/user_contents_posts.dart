@@ -20,7 +20,7 @@ Future<UserPostss> fetchUserPosts(
   required int userId,
   int pn = 1,
   int rn = 20,
-  String version = TiebaConstants.latestVersion,
+  String version = TiebaConstants.userPostsVersion,
 }) async {
   // The server caps the page at 72 items once rn reaches 74.
   checkRn('rn', rn, 1, 74);

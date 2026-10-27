@@ -15,6 +15,7 @@ class TiebaForum {
     required this.threadNum,
     required this.admins,
     required this.hasBawu,
+    this.hasRule = false,
   });
 
   final int fid;
@@ -28,6 +29,7 @@ class TiebaForum {
   final int threadNum;
   final List<BawuInfo> admins;
   final bool hasBawu;
+  final bool hasRule;
 
   bool get isValid => fid != 0 || fname.isNotEmpty;
 
@@ -51,7 +53,10 @@ class TiebaForum {
                 BawuInfo.fromJson(item.cast<String, dynamic>()),
             ]
           : const <BawuInfo>[],
-      hasBawu: managers is List && managers.isNotEmpty,
+      // The reference treats the key's presence as the flag, even when the
+      // moderator list is empty.
+      hasBawu: json.containsKey('managers'),
+      hasRule: _bool(json['has_rule']),
     );
   }
 
@@ -68,6 +73,7 @@ class TiebaForum {
       threadNum: 0,
       admins: const <BawuInfo>[],
       hasBawu: false,
+      hasRule: false,
     );
   }
 
@@ -85,6 +91,7 @@ class TiebaForum {
       threadNum: forum.threadNum,
       admins: const <BawuInfo>[],
       hasBawu: forum.managers.isNotEmpty,
+      hasRule: data.forumRule.hasForumRule != 0,
     );
   }
 }
@@ -113,4 +120,9 @@ class BawuInfo {
       nickNameNew: parseString(json['show_name']),
     );
   }
+}
+
+bool _bool(dynamic value) {
+  if (value is bool) return value;
+  return parseInt(value) != 0;
 }

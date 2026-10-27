@@ -1,4 +1,4 @@
-import 'dart:convert';
+import '../core/encoding.dart';
 
 import '../core/http_core.dart';
 import '../models/bawu_enums.dart';
@@ -60,7 +60,7 @@ Future<BawuPostLogs> fetchBawuPostlogs(
       opType: opType,
     ),
   );
-  return BawuPostLogs.fromHtml(utf8.decode(bytes, allowMalformed: true));
+  return BawuPostLogs.fromHtml(decodeHtmlBytes(bytes));
 }
 
 /// Fetches one page of the moderator user-management log.
@@ -88,5 +88,5 @@ Future<BawuUserLogs> fetchBawuUserlogs(
       opType: opType,
     ),
   );
-  return BawuUserLogs.fromHtml(utf8.decode(bytes, allowMalformed: true));
+  return BawuUserLogs.fromHtml(decodeHtmlBytes(bytes));
 }

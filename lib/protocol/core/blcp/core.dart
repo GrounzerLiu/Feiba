@@ -22,7 +22,7 @@ class BlcpConfig {
     this.readTimeout = const Duration(seconds: 10),
     this.heartbeatInterval = const Duration(seconds: 60),
     this.maxPendingNotifications = 100,
-    this.allowBadCertificate = true,
+    this.allowBadCertificate = false,
   });
 
   /// BLCP gateway host.
@@ -42,7 +42,10 @@ class BlcpConfig {
   /// Upper bound of retained push packets.
   final int maxPendingNotifications;
 
-  /// aiotieba disables hostname verification for this endpoint; mirrors that.
+  /// Whether to skip TLS certificate-chain validation.
+  ///
+  /// Kept off by default: the reference implementation only disables hostname
+  /// matching, not chain validation.
   final bool allowBadCertificate;
 }
 
@@ -60,7 +63,7 @@ class BlcpCore {
   /// Account whose chat identity this connection belongs to.
   TiebaAccount account;
 
-  final LcpFrameParser _parser = LcpFrameParser();
+  LcpFrameParser _parser = LcpFrameParser();
   final Map<int, Completer<BlcpResponse>> _waiters =
       <int, Completer<BlcpResponse>>{};
   final ListQueue<BlcpNotify> _pendingNotifies = ListQueue<BlcpNotify>();
@@ -142,6 +145,7 @@ class BlcpCore {
       await close();
     }
     _status = BlcpStatus.connecting;
+    _parser = LcpFrameParser();
     try {
       final socket = await SecureSocket.connect(
         config.host,

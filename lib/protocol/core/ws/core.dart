@@ -65,13 +65,16 @@ class WsConfig {
 
 /// One pending websocket response.
 class WsResponse {
-  WsResponse(this.reqId, this.readTimeout);
+  WsResponse(this.reqId, this.readTimeout, {this.onTimeout});
 
   /// Request id sent with the frame.
   final int reqId;
 
   /// How long [read] waits.
   final Duration readTimeout;
+
+  /// Called when [read] times out, so the owner can drop its waiter entry.
+  final void Function()? onTimeout;
 
   final Completer<Uint8List> _completer = Completer<Uint8List>();
   bool _cancelled = false;
@@ -87,6 +90,7 @@ class WsResponse {
     try {
       return await _completer.future.timeout(readTimeout);
     } on TimeoutException {
+      onTimeout?.call();
       throw TimeoutException('Timeout to read websocket response', readTimeout);
     }
   }
@@ -128,7 +132,11 @@ class WsWaiter {
   /// Creates a response slot with the next request id.
   WsResponse newResponse() {
     final id = ++_reqId;
-    final response = WsResponse(id, readTimeout);
+    final response = WsResponse(
+      id,
+      readTimeout,
+      onTimeout: () => _waiters.remove(id),
+    );
     _waiters[id] = response;
     return response;
   }
@@ -138,6 +146,9 @@ class WsWaiter {
     final response = _waiters.remove(reqId);
     response?.complete(data);
   }
+
+  /// Number of responses still waiting for a frame.
+  int get pendingCount => _waiters.length;
 
   /// Drops the response for [reqId].
   void remove(int reqId) {

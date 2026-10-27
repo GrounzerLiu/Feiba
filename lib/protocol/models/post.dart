@@ -100,9 +100,21 @@ class TiebaPosts {
   factory TiebaPosts.fromProto(pb.PbPageResIdl_DataRes data) {
     final page = TiebaPage.fromProto(data.page);
     final forum = TiebaForum.fromSimpleProto(data.forum);
-    final thread = TiebaThread.fromProto(data.thread)
-      ..fid = forum.fid
-      ..fname = forum.fname;
+    final origin = data.thread.originThreadInfo;
+    final isShare = data.thread.isShareThread != 0 && origin.pid.toInt() != 0;
+    final thread =
+        TiebaThread.fromProto(
+            data.thread,
+            contentsOverride: isShare
+                ? Contents.empty()
+                : Contents.fromThreadOrigin(origin),
+            voteInfoOverride: isShare
+                ? null
+                : VoteInfo.fromProto(origin.pollInfo),
+            shareOriginOverride: isShare ? ShareThread.fromProto(origin) : null,
+          )
+          ..fid = forum.fid
+          ..fname = forum.fname;
     final users = <int, TiebaUser>{
       for (final user in data.userList)
         user.id.toInt(): TiebaUser.fromProto(user),

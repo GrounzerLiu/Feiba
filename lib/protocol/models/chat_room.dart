@@ -277,16 +277,16 @@ class ChatSenderProfile {
   factory ChatSenderProfile.fromAccount(
     TiebaAccount account, {
     String? name,
-    bool isVip = false,
-    int glevel = 0,
+    bool? isVip,
+    int? glevel,
   }) => ChatSenderProfile(
     userId: account.userId,
     uk: account.uk,
     triggerId: account.triggerId,
     bduk: account.bduk ?? '',
-    name: name ?? account.userName ?? '',
+    name: name ?? account.nickName ?? account.userName ?? '',
     portrait: account.portrait ?? '',
-    isVip: isVip,
-    glevel: glevel,
+    isVip: isVip ?? account.isVip,
+    glevel: glevel ?? account.glevel,
   );
 }

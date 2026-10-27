@@ -28,6 +28,7 @@ import '../core/ws/enums.dart';
 import '../models/chat_login.dart';
 import '../models/chat_room.dart';
 import '../models/chat_ws.dart';
+import 'account_init.dart';
 import 'chat_login.dart';
 import 'chat_room.dart';
 import 'chat_ws.dart';
@@ -136,6 +137,18 @@ class TiebaChatClient {
     }
     await ws.connect();
     try {
+      if (full) {
+        final account = http.account;
+        if (account.clientId.isEmpty || account.sampleId.isEmpty) {
+          await fetchSync(http);
+        }
+        if ((account.zid ?? '').isEmpty) {
+          await fetchInitZid(http);
+        }
+        if ((account.baiduId ?? '').isEmpty) {
+          await fetchInitBaiduId(http);
+        }
+      }
       final info = await uploadWsSec(ws, full: full);
       _wsInfo = info;
       registerPushNotifyHandler(ws, (notifies) {
@@ -248,7 +261,7 @@ class TiebaChatClient {
   /// Stops the heartbeat, closes both transports and the push stream.
   Future<void> close() async {
     await ws.close();
-    await blcp.close();
+    await blcp.dispose();
     if (!_pushNotifies.isClosed) {
       await _pushNotifies.close();
     }

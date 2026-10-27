@@ -52,6 +52,6 @@ Future<void> main(List<String> args) async {
       );
     }
   } finally {
-    client.close();
+    await client.close();
   }
 }

@@ -122,8 +122,10 @@ void main() {
           ..duringTime = 3000,
       ]);
       final contents = Contents.fromPost(post);
-      // aiotieba removes the leading mention and the first fragment of posts.
-      expect(contents.ats, isEmpty);
+      // aiotieba keeps mentions for ordinary posts; only shared-thread
+      // origins trim the leading mention.
+      expect(contents.ats.single.userId, 42);
+      expect(contents.displayText, contains('@someone'));
       expect(contents.links.single.title, 'Example');
       expect(contents.links.single.uri.toString(), 'https://example.com/a');
       expect(contents.video?.width, 640);

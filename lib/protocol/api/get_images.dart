@@ -18,7 +18,7 @@ Uri hash2ImageUrl(String hash, {String size = 's'}) {
     'l' => '/forum/pic/item/$hash.jpg',
     _ => '/forum/w=720;q=60;g=0/sign=__/$hash.jpg',
   };
-  return Uri(scheme: 'http', host: 'imgsrc.baidu.com', path: path);
+  return Uri(scheme: 'https', host: 'imgsrc.baidu.com', path: path);
 }
 
 /// Builds an avatar URL from a portrait identifier.
@@ -29,7 +29,7 @@ Uri portraitUrl(String portrait, {String size = 's'}) {
     _ => 'n',
   };
   return Uri(
-    scheme: 'http',
+    scheme: 'https',
     host: 'tb.himg.baidu.com',
     path: '/sys/portrait$suffix/item/$portrait',
   );

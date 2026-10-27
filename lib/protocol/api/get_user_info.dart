@@ -40,7 +40,16 @@ Future<TiebaUser?> fetchUserInfo(
   if (response.error.errorno != 0) {
     throw TiebaServerException(response.error.errorno, response.error.errmsg);
   }
-  return parseProfileUser(response.data);
+  final user = parseProfileUser(response.data);
+  if (user != null &&
+      http.account.userId != 0 &&
+      user.userId == http.account.userId) {
+    http.account
+      ..nickName = user.nickNameNew
+      ..isVip = user.isVip
+      ..glevel = user.glevel;
+  }
+  return user;
 }
 
 /// Parses the profile user block shared by the profile and homepage APIs.

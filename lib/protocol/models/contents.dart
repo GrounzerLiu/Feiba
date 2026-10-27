@@ -5,7 +5,7 @@ import '../generated/generated.dart' as pb;
 ///
 /// Tieba uses slightly different fragment layouts for thread first posts,
 /// replies, comments and shared-thread origins.
-enum ContentsKind { thread, post, comment, threadOrigin }
+enum ContentsKind { thread, post, comment, threadOrigin, userSummary }
 
 /// A single rich-content fragment.
 sealed class ContentFragment {
@@ -348,6 +348,25 @@ class Contents {
     return _build(content: proto.content, kind: ContentsKind.comment);
   }
 
+  /// Builds the summary contents used by homepage/user-thread lists.
+  ///
+  /// These messages put images in `media` and video/voice in separate fields
+  /// instead of content fragments.
+  factory Contents.fromSummary(
+    Iterable<pb.PbContent> content, {
+    Iterable<pb.Media>? media,
+    pb.VideoInfo? videoInfo,
+    Iterable<pb.Voice>? voiceInfo,
+  }) {
+    return _build(
+      content: content,
+      kind: ContentsKind.userSummary,
+      media: media,
+      videoInfo: videoInfo,
+      voiceInfo: voiceInfo,
+    );
+  }
+
   /// Builds contents from a raw fragment list (notifications, search).
   factory Contents.fromContentList(
     Iterable<pb.PbContent> content, {
@@ -373,7 +392,9 @@ class Contents {
     FragVideo? video;
     FragVoice? voice;
 
-    if (kind == ContentsKind.threadOrigin && media != null) {
+    if ((kind == ContentsKind.threadOrigin ||
+            kind == ContentsKind.userSummary) &&
+        media != null) {
       for (final item in media) {
         imgs.add(FragImage.fromMedia(item));
       }
@@ -381,7 +402,11 @@ class Contents {
 
     for (final proto in content) {
       final type = proto.type;
-      if (type == 0 || type == 9 || type == 18 || type == 27 || type == 40) {
+      if (type == 0 ||
+          type == 9 ||
+          type == 18 ||
+          type == 27 ||
+          (type == 40 && kind == ContentsKind.post)) {
         final fragment = FragText(proto.text);
         texts.add(fragment);
         objs.add(fragment);
@@ -390,8 +415,9 @@ class Contents {
         emojis.add(fragment);
         objs.add(fragment);
       } else if (type == 3 || type == 20) {
-        if (kind == ContentsKind.threadOrigin) {
-          // Images of shared threads live in the media list.
+        if (kind == ContentsKind.threadOrigin ||
+            kind == ContentsKind.userSummary) {
+          // Images of summaries/shared threads live in the media list.
           continue;
         }
         final fragment = FragImage.fromContent(proto);
@@ -408,15 +434,19 @@ class Contents {
         texts.add(fragment);
         objs.add(fragment);
       } else if (type == 10) {
-        if (kind == ContentsKind.thread || kind == ContentsKind.threadOrigin) {
-          // Thread audio is carried by voice_info instead.
+        if (kind == ContentsKind.thread ||
+            kind == ContentsKind.threadOrigin ||
+            kind == ContentsKind.userSummary) {
+          // Thread/summary audio is carried by voice_info instead.
           continue;
         }
         final fragment = FragVoice.fromContent(proto);
         voice = fragment;
         objs.add(fragment);
       } else if (type == 5) {
-        if (kind == ContentsKind.thread || kind == ContentsKind.threadOrigin) {
+        if (kind == ContentsKind.thread ||
+            kind == ContentsKind.threadOrigin ||
+            kind == ContentsKind.userSummary) {
           continue;
         }
         final fragment = FragVideo.fromContent(proto);
@@ -434,7 +464,9 @@ class Contents {
       }
     }
 
-    if (kind == ContentsKind.thread || kind == ContentsKind.threadOrigin) {
+    if (kind == ContentsKind.thread ||
+        kind == ContentsKind.threadOrigin ||
+        kind == ContentsKind.userSummary) {
       if (videoInfo != null && videoInfo.videoWidth != 0) {
         video = FragVideo.fromInfo(videoInfo);
         objs.add(video);
@@ -445,14 +477,14 @@ class Contents {
       }
     }
 
-    if (kind == ContentsKind.threadOrigin || kind == ContentsKind.post) {
+    if (kind == ContentsKind.threadOrigin) {
       if (ats.isNotEmpty && objs.isNotEmpty) {
         ats.removeAt(0);
         objs.removeAt(0);
       }
     }
 
-    if (kind == ContentsKind.threadOrigin) {
+    if (kind == ContentsKind.threadOrigin || kind == ContentsKind.userSummary) {
       objs.addAll(imgs);
     }
 

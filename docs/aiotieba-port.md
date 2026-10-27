@@ -2,7 +2,7 @@
 
 > 参考实现：https://github.com/lumina37/aiotieba 4.8.2（Unlicense，public domain）。
 > 状态：aiotieba 的 API 模块与核心能力已全部移植；现有 Flutter UI 仍未改动。
-> 规模：118 个手写 Dart 文件 / 约 14,337 行；64 份 proto；9 个协议测试文件 / 83 个用例。
+> 规模：119 个手写 Dart 文件 / 约 14,551 行；64 份 proto；15 个协议测试文件 / 97 个用例。
 > 完整模块清单：[port-checklist.md](port-checklist.md)。
 
 ## 一、目录
@@ -104,18 +104,19 @@ flutter build windows --debug
 已实测：
 
 - flutter analyze：No issues found
-- flutter test：87 项全部通过（含 83 个协议用例）
+- flutter test：101 项全部通过（含 97 个协议用例）
 - Windows debug 构建成功
-- 公开接口 smoke：吧/帖/楼层/楼中楼（29 条，page 1/22，hasMore=true）、双搜索、用户资料/主页/主题帖、吧详情/11 分区、排行、图片、crypto
+- 公开接口 smoke：吧/帖/楼层/楼中楼（29 条，page 1/22，hasMore=true）、双搜索、用户资料/主页/主题帖、吧详情/11 分区、排行/会员榜（中文名正常）、粉丝列表（100/2520）、图片、crypto
 - zid（87 字符）与 BAIDUID 真实获取
+- WebSocket 的 RSA 公钥已按参考补全为 2048-bit，并有长度/输出块测试；聊天仍未做真实登录联调
 - 新旧对照：旧 JSON 13 条 vs 新 protobuf 20 条，13 条 tid 全部重合；帖子页均 20 条，标题与首楼长度一致
 - crypto 参考值：cuid_galaxy2 与 c3_aid 与 aiotieba C 扩展逐字节一致
 
 ## 八、验证边界
 
 - 需要 BDUSS/STOKEN 的接口与全部写操作：实现/编译/参数校验完成，未在仓库内用真实账号执行。
-- 聊天/BLCP/WS：编译与 28 个单测通过；无真实登录态，未做服务器联调。
-- enuid（BB64）是按反编译 C 移植的，参考向量一致；服务器接受度未实测，cloud-control 登录为 best-effort。
+- 聊天/BLCP/WS：编译与 31 个单测通过；无真实登录态，未做服务器联调。
+- enuid 按参考 C 的零填充实现（42 字符 + 15 个 NUL）；cloud-control 的服务器接受度未实测，失败会记录到 cloudControlError，不影响 IM。
 - core/net.py 没有单独 Dart 文件，其职责由 TiebaHttpCore + BlcpConfig/WsConfig 承担。
 - get_images 返回原始字节，不移植 aiotieba 的 OpenCV 解码。
 - 发帖/回帖不在 aiotieba 中，本项目也未实现。

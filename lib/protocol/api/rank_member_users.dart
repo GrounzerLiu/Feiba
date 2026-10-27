@@ -1,5 +1,4 @@
-import 'dart:convert';
-
+import '../core/encoding.dart';
 import '../core/http_core.dart';
 import '../models/rank_member_users.dart';
 
@@ -17,5 +16,5 @@ Future<MemberUsers> fetchMemberUsers(
     '/bawu2/platform/listMemberInfo',
     query: <String, String>{'word': fname, 'pn': '$pn', 'ie': 'utf-8'},
   );
-  return MemberUsers.fromHtml(utf8.decode(bytes, allowMalformed: true));
+  return MemberUsers.fromHtml(decodeHtmlBytes(bytes));
 }

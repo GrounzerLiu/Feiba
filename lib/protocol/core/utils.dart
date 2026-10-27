@@ -1,6 +1,8 @@
 /// Small parsing helpers shared by the protocol models.
 library;
 
+import 'dart:developer' as developer;
+
 int parseInt(dynamic value, [int fallback = 0]) {
   if (value is int) return value;
   if (value is num) return value.toInt();
@@ -35,8 +37,14 @@ int tbnum2int(dynamic value, String suffix) {
 }
 
 void checkRn(String name, int value, int min, int max) {
+  // The reference logs and sends the raw value; the server clamps/deals with
+  // it. Keep validation non-fatal so a UI mistake cannot escape as a
+  // non-TiebaException RangeError.
   if (value < min || value > max) {
-    throw RangeError.range(value, min, max, name);
+    developer.log(
+      'rn=$value is out of range [$min, $max]',
+      name: 'feiba.protocol.$name',
+    );
   }
 }
 

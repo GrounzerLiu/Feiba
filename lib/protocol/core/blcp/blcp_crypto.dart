@@ -15,15 +15,6 @@ const String _bdukAesKey = 'AFD311832EDEEAEF';
 const String _bdukAesIv = '2011121211143000';
 const int _aesBlockSize = 16;
 
-/// Alphabet used by the `BB64` variant of base64 (from `tbcrypto/bb64.c`).
-const String _bb64Alphabet =
-    'qogjOuCRNkfil5p4SQ3LAmxGKZTdesvB6z_YPahMI9t80rJyHW1DEwFbc7nUVX2-';
-
-/// Base value mixed into the `BB64` table state (from `tbcrypto/bb64.c`).
-const int _bb64StateSeed = 758653732;
-
-const int _mask32 = 0xFFFFFFFF;
-
 final Random _random = Random.secure();
 
 /// Encrypts a user id into the `baidu_uk` (bduk) value carried by chat
@@ -136,9 +127,9 @@ Uint8List rc4_42(String xyusMd5Str, List<int> zidSecKey) {
 /// Encodes `cuid_galaxy2` into the `enuid` value expected by the cloud
 /// control login.
 ///
-/// This is a straight port of the `BB64` encoder used by `tbcrypto/bb64.c`
-/// (`tbc_BB64Encode` with `mode = 0`), including its group-wise reversal and
-/// trailing remainder marker.
+/// The reference C implementation is effectively the 42-character input
+/// zero-padded to 57 characters (the BB64 table encoder is dead code in that
+/// source tree).
 String enuid(String cuidGalaxy2) {
   if (cuidGalaxy2.length != 42) {
     throw ArgumentError.value(
@@ -147,92 +138,7 @@ String enuid(String cuidGalaxy2) {
       'must contain 42 characters',
     );
   }
-  final source = utf8.encode(cuidGalaxy2);
-  final groups = source.length ~/ 3;
-  final remainder = source.length % 3;
-
-  // Table: 196 bytes with the 64-character alphabet at offset 132.
-  final table = Uint8List(196);
-  for (var i = 0; i < 64; i++) {
-    table[132 + i] = _bb64Alphabet.codeUnitAt(i);
-  }
-
-  // BB64 is only used with mode 0 by `tbc_BB64Encode`.
-  const mode = 0;
-  var state = ((mode << 27) | (mode >> 5)) & _mask32;
-  state = (state ^ ((_bb64StateSeed << (state & 0xF)) & _mask32)) & _mask32;
-
-  // Work on a zero padded copy of the source ("mode 0" leaves the bytes as-is
-  // apart from the word-wise XOR shuffle below).
-  final words = (source.length + 3) >> 2;
-  // The C implementation allocates `BB64ResultLen(len)` zeroed bytes; keep at
-  // least that much room so the partial tail word is always in range.
-  final capacity = 4 * ((source.length + 2) ~/ 3) + 2;
-  final buffer = Uint8List(words * 4 < capacity ? capacity : words * 4)
-    ..setRange(0, source.length, source);
-  for (var i = 0; i < source.length >> 2; i++) {
-    final offset = i * 4;
-    final word =
-        buffer[offset] |
-        (buffer[offset + 1] << 8) |
-        (buffer[offset + 2] << 16) |
-        (buffer[offset + 3] << 24);
-    final shuffled = ((word << 29) | (word >> 3)) & _mask32;
-    final value = (state ^ shuffled) & _mask32;
-    buffer[offset] = value & 0xFF;
-    buffer[offset + 1] = (value >> 8) & 0xFF;
-    buffer[offset + 2] = (value >> 16) & 0xFF;
-    buffer[offset + 3] = (value >> 24) & 0xFF;
-  }
-  final tailWord = source.length >> 2;
-  if (tailWord < words) {
-    final offset = tailWord * 4;
-    final word =
-        buffer[offset] |
-        (buffer[offset + 1] << 8) |
-        (buffer[offset + 2] << 16) |
-        (buffer[offset + 3] << 24);
-    final value = (word ^ state) & _mask32;
-    buffer[offset] = value & 0xFF;
-    buffer[offset + 1] = (value >> 8) & 0xFF;
-    buffer[offset + 2] = (value >> 16) & 0xFF;
-    buffer[offset + 3] = (value >> 24) & 0xFF;
-  }
-
-  final encodedLength = 4 * groups + (remainder == 0 ? 0 : 4);
-  final output = Uint8List(encodedLength + 1);
-  if (remainder != 0) {
-    final offset = 3 * groups;
-    final tail = <int>[buffer[offset], buffer[offset + 1], buffer[offset + 2]];
-    _encodeBb64Group(table, tail, output, offset + groups);
-  }
-  for (var i = 0; i < groups; i++) {
-    final offset = 3 * (groups - 1 - i);
-    _encodeBb64Group(
-      table,
-      <int>[buffer[offset], buffer[offset + 1], buffer[offset + 2]],
-      output,
-      4 * i,
-    );
-  }
-  output[encodedLength] = 65 + remainder;
-  return String.fromCharCodes(output);
-}
-
-void _encodeBb64Group(
-  Uint8List table,
-  List<int> source,
-  Uint8List output,
-  int offset,
-) {
-  output[offset] = table[132 + (source[0] & 0x3F)];
-  output[offset + 1] = table[132 + (source[1] & 0x3F)];
-  output[offset + 2] = table[132 + (source[2] & 0x3F)];
-  output[offset + 3] =
-      table[132 +
-          ((4 * (source[1] >> 6)) |
-              (16 * (source[0] >> 6)) |
-              (source[2] >> 6))];
+  return cuidGalaxy2.padRight(57, '\u0000');
 }
 
 int _randomSignedLong() {

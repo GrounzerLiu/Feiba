@@ -89,8 +89,12 @@ class TiebaUser {
       ],
       isBawu: proto.isBawu != 0,
       isVip: proto.isMem != 0,
-      privLike: PrivLike.fromValue(privSets.like),
-      privReply: PrivReply.fromValue(privSets.reply),
+      privLike: privSets.like == 0
+          ? PrivLike.visible
+          : PrivLike.fromValue(privSets.like),
+      privReply: privSets.reply == 0
+          ? PrivReply.all
+          : PrivReply.fromValue(privSets.reply),
       tiebaUid: int.tryParse(proto.tiebaUid) ?? 0,
       age: double.tryParse(proto.tbAge) ?? 0,
       postNum: proto.postNum,

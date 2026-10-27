@@ -136,6 +136,24 @@ Future<void> main(List<String> args) async {
       );
     });
 
+    await _step('rank / member list', () async {
+      final forums = await client.getRankForums(fname);
+      final users = await client.getRankUsers(fname);
+      final members = await client.getMemberUsers(fname);
+      stdout.writeln(
+        '   rankForums=${forums.objs.length} first=${forums.objs.isEmpty ? '-' : forums.objs.first.fname} '
+        'rankUsers=${users.objs.length} first=${users.objs.isEmpty ? '-' : users.objs.first.userName} '
+        'members=${members.objs.length} first=${members.objs.isEmpty ? '-' : members.objs.first.userName}',
+      );
+    });
+
+    await _step('fans', () async {
+      final fans = await client.getFans(2213840917);
+      stdout.writeln(
+        '   fans=${fans.objs.length} page=${fans.page.currentPage} total=${fans.page.totalCount} hasMore=${fans.hasMore}',
+      );
+    });
+
     await _step('image download', () async {
       final url = threads.objs
           .expand((t) => t.contents.imgs)
@@ -156,7 +174,7 @@ Future<void> main(List<String> args) async {
       );
     });
   } finally {
-    client.close();
+    await client.close();
   }
 }
 

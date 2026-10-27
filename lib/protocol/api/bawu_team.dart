@@ -1,4 +1,4 @@
-import 'dart:convert';
+import '../core/encoding.dart';
 
 import 'package:fixnum/fixnum.dart';
 
@@ -100,5 +100,5 @@ Future<BawuMemberList> fetchBawuMemberlist(
     '/bawu2/platform/listMember',
     query: query,
   );
-  return BawuMemberList.fromHtml(utf8.decode(bytes, allowMalformed: true));
+  return BawuMemberList.fromHtml(decodeHtmlBytes(bytes));
 }

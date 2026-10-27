@@ -10,10 +10,11 @@ Future<TiebaSearchInForums> fetchSearchInForum(
   required String fname,
   required String query,
   int pn = 1,
-  int rn = 20,
+  int rn = 30,
   SearchInForumType type = SearchInForumType.all,
   bool onlyThread = false,
 }) async {
+  checkRn('rn', rn, 1, 50);
   final json = await http.postForm(
     '/c/s/searchpost',
     <MapEntry<String, String>>[

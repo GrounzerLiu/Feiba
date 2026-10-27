@@ -50,8 +50,18 @@ class FollowPage {
     return FollowPage(
       currentPage: current,
       totalCount: parseInt(json['total_follow_num']),
-      hasMore: parseInt(json['has_more']) != 0,
+      hasMore: _asBool(json['has_more']),
       hasPrev: current > 1,
+    );
+  }
+
+  /// Parses the nested `page` object returned by the fans endpoint.
+  factory FollowPage.fromFanJson(Map<String, dynamic> json) {
+    return FollowPage(
+      currentPage: parseInt(json['current_page']),
+      totalCount: parseInt(json['total_count']),
+      hasMore: _asBool(json['has_more']),
+      hasPrev: _asBool(json['has_prev']),
     );
   }
 }
@@ -87,7 +97,18 @@ class TiebaFans {
   bool get hasMore => page.hasMore;
 
   factory TiebaFans.fromJson(Map<String, dynamic> json) {
-    final list = json['fans_list'] ?? json['follow_list'];
+    final data = json['data'] is Map
+        ? (json['data'] as Map).cast<String, dynamic>()
+        : json;
+    final list = data['user_list'] ?? data['fans_list'] ?? data['follow_list'];
+    final page = data['page'] is Map
+        ? FollowPage.fromFanJson((data['page'] as Map).cast<String, dynamic>())
+        : const FollowPage(
+            currentPage: 0,
+            totalCount: 0,
+            hasMore: false,
+            hasPrev: false,
+          );
     return TiebaFans(
       objs: list is List
           ? <FollowUser>[
@@ -95,7 +116,7 @@ class TiebaFans {
                 FollowUser.fromJson(item.cast<String, dynamic>()),
             ]
           : const <FollowUser>[],
-      page: FollowPage.fromJson(json),
+      page: page,
     );
   }
 }
@@ -207,4 +228,9 @@ class TiebaFollowForums {
     }
     return TiebaFollowForums(objs: objs, hasMore: hasMore);
   }
+}
+
+bool _asBool(dynamic value) {
+  if (value is bool) return value;
+  return parseInt(value) != 0;
 }

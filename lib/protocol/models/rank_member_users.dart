@@ -36,8 +36,9 @@ class MemberUser {
     final href = anchor.attributes['href'] ?? '';
     final portrait = href.length > 14 ? href.substring(14) : href;
     final span = element.querySelector('span');
+    final title = anchor.attributes['title']?.trim() ?? '';
     return MemberUser(
-      userName: anchor.attributes['title'] ?? anchor.text.trim(),
+      userName: title.isNotEmpty ? title : anchor.text.trim(),
       portrait: normalizePortrait(portrait),
       level: span == null ? 0 : _classNumber(span.classes),
     );

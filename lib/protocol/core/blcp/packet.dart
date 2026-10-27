@@ -533,6 +533,10 @@ class BlcpPacket {
     final meta = RpcMeta.decode(frame.header);
     final body = BlcpBody.decodeFor(meta, frame.body);
     if (meta.isNotify) return BlcpNotify(meta, body);
+    // A server-originated request frame is not expected by the reference
+    // client.  Decode it as a request so the response-only getters below can
+    // never dereference a missing response meta.
+    if (meta.request != null) return BlcpRequest(meta, body);
     return BlcpResponse(meta, body);
   }
 }

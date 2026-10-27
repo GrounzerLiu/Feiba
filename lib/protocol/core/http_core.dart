@@ -44,7 +44,7 @@ class TiebaHttpCore {
     _dio.options
       ..connectTimeout = this.config.connectTimeout
       ..receiveTimeout = this.config.receiveTimeout
-      ..followRedirects = true
+      ..followRedirects = false
       ..validateStatus = (_) => true;
     final proxy = this.config.proxy;
     if (proxy != null && proxy.isNotEmpty) {
@@ -95,7 +95,7 @@ class TiebaHttpCore {
     final headers = <String, String>{
       'User-Agent': config.webUserAgent,
       'Accept': 'application/json, text/plain, */*',
-      'Accept-Encoding': 'gzip, deflate',
+      'Accept-Encoding': 'gzip',
       'Connection': 'keep-alive',
     };
     if (account.bduss.isNotEmpty) {
@@ -251,9 +251,18 @@ class TiebaHttpCore {
     return _checkedBytes(response);
   }
 
-  /// GET an arbitrary URL (image CDN, avatar host) with web headers.
+  Map<String, String> get _assetHeaders => <String, String>{
+    'User-Agent': config.webUserAgent,
+    'Accept': 'image/*,*/*;q=0.8',
+    'Accept-Encoding': 'gzip',
+  };
+
+  /// GET an arbitrary URL (image CDN, avatar host) without credentials.
+  ///
+  /// Image URLs can come from post content and may point at any host, so the
+  /// BDUSS/STOKEN cookies used by web endpoints must never be attached here.
   Future<Uint8List> fetchBytes(Uri uri, {String? referer}) async {
-    final headers = <String, String>{..._webHeaders};
+    final headers = <String, String>{..._assetHeaders};
     if (referer != null) headers['Referer'] = referer;
     final response = await _dio.get<List<int>>(
       uri.toString(),
@@ -288,7 +297,10 @@ class TiebaHttpCore {
         responseType: ResponseType.bytes,
       ),
     );
-    return _decodeJson(_checkedBytes(response));
+    return _decodeJson(
+      _checkedBytes(response),
+      contentType: response.headers.value('content-type'),
+    );
   }
 
   /// Closes the underlying HTTP client.
@@ -297,7 +309,10 @@ class TiebaHttpCore {
   TiebaHttpResponse _toResponse(Response<List<int>> response) {
     final headers = <String, String>{};
     response.headers.forEach((name, values) {
-      if (values.isNotEmpty) headers[name.toLowerCase()] = values.first;
+      if (values.isEmpty) return;
+      final key = name.toLowerCase();
+      // Keep every Set-Cookie value; auth flows scan them for a specific name.
+      headers[key] = key == 'set-cookie' ? values.join('\n') : values.first;
     });
     final data = response.data;
     return TiebaHttpResponse(
@@ -326,7 +341,7 @@ class TiebaHttpCore {
           (type.contains('gbk') ||
               type.contains('gb2312') ||
               type.contains('gb18030'))
-          ? gbk.decode(bytes)
+          ? gbk_bytes.decode(bytes)
           : utf8.decode(bytes, allowMalformed: true);
       final decoded = jsonDecode(text);
       if (decoded is Map<String, dynamic>) return decoded;
