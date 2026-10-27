@@ -104,7 +104,7 @@ flutter build windows --debug
 已实测：
 
 - flutter analyze：No issues found
-- flutter test：101 项全部通过（含 97 个协议用例）
+- flutter test：103 项全部通过（含 97 个协议用例）
 - Windows debug 构建成功
 - 公开接口 smoke：吧/帖/楼层/楼中楼（29 条，page 1/22，hasMore=true）、双搜索、用户资料/主页/主题帖、吧详情/11 分区、排行/会员榜（中文名正常）、粉丝列表（100/2520）、图片、crypto
 - zid（87 字符）与 BAIDUID 真实获取

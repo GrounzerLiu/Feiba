@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'ui/home_page.dart';
+import 'ui/main_shell.dart';
 import 'ui/theme.dart';
 
 class FeibaApp extends StatelessWidget {
@@ -14,7 +14,7 @@ class FeibaApp extends StatelessWidget {
       theme: buildAppTheme(Brightness.light),
       darkTheme: buildAppTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      home: const HomePage(),
+      home: const MainShell(),
     );
   }
 }

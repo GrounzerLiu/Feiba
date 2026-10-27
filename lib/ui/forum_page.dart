@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/models/forum_page.dart';
 import '../data/tieba_repository.dart';
+import 'format.dart';
 import 'thread_page.dart';
+import 'widgets/name_avatar.dart';
+import 'widgets/thread_card.dart';
 
 class ForumPage extends StatefulWidget {
   const ForumPage({super.key, required this.forumName});
@@ -21,9 +24,11 @@ class _ForumPageState extends State<ForumPage> {
   TiebaForum? _forum;
   Map<int, dynamic> _users = const <int, dynamic>{};
   int _page = 1;
+  int _sort = 0;
   bool _loading = false;
   bool _hasMore = true;
   String? _error;
+  bool _followed = false;
 
   @override
   void initState() {
@@ -40,7 +45,7 @@ class _ForumPageState extends State<ForumPage> {
 
   void _onScroll() {
     if (!_scroll.hasClients || _loading || !_hasMore) return;
-    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 400) {
+    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 500) {
       _load();
     }
   }
@@ -57,7 +62,12 @@ class _ForumPageState extends State<ForumPage> {
       }
     });
     try {
-      final data = await _repo.forumPage(widget.forumName, pn: _page);
+      final data = await _repo.forumPage(
+        widget.forumName,
+        pn: _page,
+        sortType: _sort == 1 ? 1 : 0,
+        isGood: _sort == 2,
+      );
       if (!mounted) return;
       setState(() {
         _forum = data.forum ?? _forum;
@@ -66,152 +76,129 @@ class _ForumPageState extends State<ForumPage> {
         _hasMore = data.hasMore;
         _page += 1;
       });
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final title = _forum?.name ?? widget.forumName;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        actions: <Widget>[
-          IconButton(
-            tooltip: '刷新',
-            onPressed: () => _load(reset: true),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: _buildBody(),
-    );
+  void _changeSort(int value) {
+    if (_sort == value) return;
+    setState(() => _sort = value);
+    _load(reset: true);
   }
-
-  Widget _buildBody() {
-    if (_threads.isEmpty) {
-      if (_loading) return const Center(child: CircularProgressIndicator());
-      if (_error != null) {
-        return _ErrorView(
-          message: _error!,
-          onRetry: () => _load(reset: true),
-        );
-      }
-      return const Center(child: Text('这个吧还没有帖子'));
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => _load(reset: true),
-      child: ListView.separated(
-        controller: _scroll,
-        itemCount: _threads.length + (_hasMore ? 1 : 0),
-        separatorBuilder: (_, _) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          if (index >= _threads.length) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            );
-          }
-          final thread = _threads[index];
-          return _ThreadTile(
-            thread: thread,
-            authorName: _users[thread.authorId]?.displayName as String?,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => ThreadPage(tid: thread.tid, title: thread.title),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _ThreadTile extends StatelessWidget {
-  const _ThreadTile({required this.thread, this.authorName, this.onTap});
-
-  final ThreadSummary thread;
-  final String? authorName;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final preview = thread.preview;
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (thread.isTop)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6, top: 2),
-                    child: _Badge(text: '置顶', color: theme.colorScheme.error),
-                  ),
-                if (thread.isGood)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6, top: 2),
-                    child: _Badge(text: '精品', color: theme.colorScheme.primary),
-                  ),
-                Expanded(
-                  child: Text(
-                    thread.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (preview.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 6),
-              Text(
-                preview,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+    final title = _forum?.name ?? widget.forumName;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        actions: <Widget>[
+          IconButton(
+            tooltip: '刷新',
+            onPressed: () => _load(reset: true),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () => _load(reset: true),
+        child: CustomScrollView(
+          controller: _scroll,
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: <Widget>[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: _ForumHeader(
+                  forum: _forum,
+                  fallbackName: widget.forumName,
+                  followed: _followed,
+                  onFollow: () {
+                    setState(() => _followed = !_followed);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          _followed ? '已加入关注（界面演示）' : '已取消关注（界面演示）',
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                if (authorName != null && authorName!.isNotEmpty)
-                  Flexible(
-                    child: Text(
-                      authorName!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall,
-                    ),
-                  ),
-                const Spacer(),
-                Icon(Icons.chat_bubble_outline,
-                    size: 13, color: theme.colorScheme.onSurfaceVariant),
-                const SizedBox(width: 3),
-                Text('${thread.replyNum}', style: theme.textTheme.labelSmall),
-              ],
             ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text('帖子', style: theme.textTheme.titleMedium),
+                    ),
+                    for (var i = 0; i < 3; i++) ...<Widget>[
+                      if (i > 0) const SizedBox(width: 6),
+                      ChoiceChip(
+                        label: Text(<String>['最新回复', '最新发布', '精品'][i]),
+                        selected: _sort == i,
+                        onSelected: (_) => _changeSort(i),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            if (_threads.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
+                    ? _ForumError(
+                        message: _error!,
+                        onRetry: () => _load(reset: true),
+                      )
+                    : const Center(child: Text('这个吧还没有帖子')),
+              )
+            else
+              SliverList.builder(
+                itemCount: _threads.length + (_hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index >= _threads.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      child: Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        ),
+                      ),
+                    );
+                  }
+                  final thread = _threads[index];
+                  final user = _users[thread.authorId];
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
+                    child: ThreadCard(
+                      thread: thread,
+                      authorName: user?.displayName as String?,
+                      authorAvatar: user?.avatarUrl as String?,
+                      forumName: title,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              ThreadPage(tid: thread.tid, title: thread.title),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
           ],
         ),
       ),
@@ -219,27 +206,164 @@ class _ThreadTile extends StatelessWidget {
   }
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge({required this.text, required this.color});
+class _ForumHeader extends StatelessWidget {
+  const _ForumHeader({
+    required this.forum,
+    required this.fallbackName,
+    required this.followed,
+    required this.onFollow,
+  });
 
-  final String text;
-  final Color color;
+  final TiebaForum? forum;
+  final String fallbackName;
+  final bool followed;
+  final VoidCallback onFollow;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final name = forum?.name ?? fallbackName;
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        theme.colorScheme.primary,
+        theme.colorScheme.primary.withValues(alpha: 0.72),
+      ],
+    );
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(4),
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: Text(text, style: TextStyle(fontSize: 10, color: color)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              NameAvatar(name: name, imageUrl: forum?.avatar, size: 54),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      forum?.slogan?.trim().isNotEmpty == true
+                          ? forum!.slogan!
+                          : '欢迎来到 $name',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                onPressed: onFollow,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(
+                    alpha: followed ? 0.9 : 0.18,
+                  ),
+                  foregroundColor: followed
+                      ? theme.colorScheme.primary
+                      : Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  minimumSize: const Size(0, 36),
+                ),
+                child: Text(followed ? '已关注' : '关注'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: <Widget>[
+              _HeaderMetric(
+                value: compactCount(forum?.memberNum ?? 0),
+                label: '成员',
+              ),
+              const SizedBox(width: 22),
+              _HeaderMetric(
+                value: compactCount(forum?.postNum ?? 0),
+                label: '帖子',
+              ),
+              const Spacer(),
+              Icon(
+                Icons.verified_outlined,
+                size: 16,
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '公开吧',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
+class _HeaderMetric extends StatelessWidget {
+  const _HeaderMetric({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.68),
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ForumError extends StatelessWidget {
+  const _ForumError({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -252,10 +376,10 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(Icons.cloud_off_outlined, size: 40),
+            const Icon(Icons.cloud_off_rounded, size: 38),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
+            Text('加载失败，检查网络后再试', textAlign: TextAlign.center),
+            const SizedBox(height: 14),
             FilledButton(onPressed: onRetry, child: const Text('重试')),
           ],
         ),

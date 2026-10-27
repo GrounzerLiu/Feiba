@@ -12,12 +12,20 @@ class Session {
   String? stoken;
   String? userName;
 
+  /// Set when the platform preferences store cannot be used (e.g. a
+  /// restricted AppData directory). Login then only lives for this run.
+  String? persistenceError;
+
   /// Set by the app layer (see `session_store.dart`).
   Future<void> Function(Session session)? onPersist;
 
   bool get isLoggedIn => (bduss?.isNotEmpty ?? false);
 
-  Future<void> save({required String bduss, String? stoken, String? userName}) async {
+  Future<void> save({
+    required String bduss,
+    String? stoken,
+    String? userName,
+  }) async {
     this.bduss = bduss.trim();
     this.stoken = (stoken ?? '').trim().isEmpty ? null : stoken!.trim();
     if (userName != null) this.userName = userName;

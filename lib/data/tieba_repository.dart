@@ -16,12 +16,18 @@ class TiebaRepository {
   static List<dynamic> _list(dynamic v) => v is List ? v : const <dynamic>[];
 
   /// Thread list of a forum.
-  Future<ForumPageData> forumPage(String kw, {int pn = 1}) async {
+  Future<ForumPageData> forumPage(
+    String kw, {
+    int pn = 1,
+    int sortType = 0,
+    bool isGood = false,
+  }) async {
     final json = await client.post('/c/f/frs/page', {
       'kw': kw,
       'pn': '$pn',
       'rn': '20',
-      'sort_type': '0',
+      'sort_type': '$sortType',
+      'is_good': isGood ? '1' : '0',
       'q_type': '2',
       'st_type': 'tb_forumlist',
       'with_group': '0',
@@ -93,11 +99,7 @@ class TiebaRepository {
     // full page is the only reliable signal that more data exists.
     final hasMore =
         list.length >= rn || (page is Map && _int(page['has_more']) != 0);
-    return SubPostPage(
-      posts: list,
-      total: total,
-      hasMore: hasMore,
-    );
+    return SubPostPage(posts: list, total: total, hasMore: hasMore);
   }
 
   /// Raw sub-post (floor) response, used by the thread page to load replies.
@@ -119,7 +121,8 @@ class TiebaRepository {
   }
 
   /// Validates a BDUSS and returns the bound account, or null when invalid.
-  Future<TiebaAccount?> checkAccount(String bduss) => client.fetchAccount(bduss);
+  Future<TiebaAccount?> checkAccount(String bduss) =>
+      client.fetchAccount(bduss);
 
   /// Posts of a thread.
   Future<ThreadPageData> threadPage(int tid, {int pn = 1}) async {

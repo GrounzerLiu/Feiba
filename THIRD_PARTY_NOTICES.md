@@ -25,3 +25,9 @@
 ## Dart / Flutter 依赖
 
 见 pubspec.yaml，各自遵循其 pub.dev 许可证。
+## TiebaLite（仅设计参考，未包含代码或素材）
+
+- 项目：https://github.com/HuanCheng65/TiebaLite
+- 许可证：GPL-3.0
+- 使用方式：本项目的 UI 布局、导航和信息层级参考其公开设计；未复制其 Kotlin 代码、图片、字体或 drawable。
+  Feiba 当前使用 MIT 许可证，若未来直接使用其素材，需要先调整许可证或取得授权。
