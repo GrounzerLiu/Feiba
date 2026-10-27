@@ -22,8 +22,6 @@ class _ThreadPageState extends State<ThreadPage> {
   final ScrollController _scroll = ScrollController();
 
   final List<PostItem> _posts = <PostItem>[];
-  final Map<int, List<SubPost>> _expandedSubs = <int, List<SubPost>>{};
-  final Set<int> _subLoading = <int>{};
 
   Map<int, TiebaUser> _users = const <int, TiebaUser>{};
   int _page = 1;
@@ -62,7 +60,6 @@ class _ThreadPageState extends State<ThreadPage> {
         _page = 1;
         _hasMore = true;
         _posts.clear();
-        _expandedSubs.clear();
       }
     });
     try {
@@ -83,34 +80,32 @@ class _ThreadPageState extends State<ThreadPage> {
     }
   }
 
-  Future<void> _expandSubs(PostItem post) async {
-    if (_subLoading.contains(post.id)) return;
-    setState(() => _subLoading.add(post.id));
-    final collected = <int, SubPost>{};
-    try {
-      var pn = 1;
-      var more = true;
-      while (more && pn <= 100) {
-        final page = await _repo.subPosts(
+  Future<void> _openSubPosts(PostItem post) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => FractionallySizedBox(
+        // Keep small subpost lists compact; long lists get the usual drawer.
+        heightFactor: post.subPostNumber <= 3
+            ? 0.38
+            : post.subPostNumber <= 10
+            ? 0.58
+            : 0.78,
+        child: _SubPostsSheet(
           tid: widget.tid,
           pid: post.id,
-          pn: pn,
-        );
-        for (final sub in page.posts) {
-          collected[sub.id] = sub;
-        }
-        more = page.hasMore && page.posts.isNotEmpty;
-        pn += 1;
-      }
-      if (!mounted) return;
-      setState(() => _expandedSubs[post.id] = collected.values.toList());
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('加载楼中楼失败：$error')));
-    } finally {
-      if (mounted) setState(() => _subLoading.remove(post.id));
-    }
+          total: post.subPostNumber,
+          initial: post.subPosts,
+          users: _users,
+        ),
+      ),
+    );
   }
 
   void _showReplyComposer() {
@@ -233,17 +228,14 @@ class _ThreadPageState extends State<ThreadPage> {
           );
         }
         final post = _posts[index];
-        final expanded = _expandedSubs[post.id];
         return _PostCard(
           post: post,
           isOp: index == 0,
           author: _users[post.authorId],
-          subs: expanded ?? post.subPosts,
-          loadingSubs: _subLoading.contains(post.id),
-          onExpand:
-              expanded == null &&
-                  (post.subPostNumber > 0 || post.subPosts.isNotEmpty)
-              ? () => _expandSubs(post)
+          users: _users,
+          subs: post.subPosts,
+          onExpand: post.subPostNumber > 0 || post.subPosts.isNotEmpty
+              ? () => _openSubPosts(post)
               : null,
         );
       },
@@ -256,16 +248,16 @@ class _PostCard extends StatelessWidget {
     required this.post,
     this.isOp = false,
     this.author,
+    required this.users,
     this.subs = const <SubPost>[],
-    this.loadingSubs = false,
     this.onExpand,
   });
 
   final PostItem post;
   final bool isOp;
   final TiebaUser? author;
+  final Map<int, TiebaUser> users;
   final List<SubPost> subs;
-  final bool loadingSubs;
   final VoidCallback? onExpand;
 
   @override
@@ -373,7 +365,7 @@ class _PostCard extends StatelessWidget {
                   for (final sub in subs.take(4))
                     Padding(
                       padding: const EdgeInsets.only(bottom: 7),
-                      child: _SubPostRow(sub: sub),
+                      child: _SubPostRow(sub: sub, author: users[sub.authorId]),
                     ),
                   if (subs.length > 4 && onExpand != null)
                     Text(
@@ -386,16 +378,7 @@ class _PostCard extends StatelessWidget {
               ),
             ),
           ],
-          if (loadingSubs)
-            const Padding(
-              padding: EdgeInsets.only(top: 10),
-              child: SizedBox(
-                width: 17,
-                height: 17,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else if (onExpand != null)
+          if (onExpand != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: InkWell(
@@ -433,18 +416,23 @@ class _PostCard extends StatelessWidget {
 }
 
 class _SubPostRow extends StatelessWidget {
-  const _SubPostRow({required this.sub});
+  const _SubPostRow({required this.sub, this.author});
 
   final SubPost sub;
+  final TiebaUser? author;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final name = sub.authorName ?? '用户';
+    final authorName = author?.displayName;
+    final name = (authorName == null || authorName.isEmpty)
+        ? (sub.authorName ?? '用户')
+        : authorName;
+    final avatar = author?.avatarUrl ?? sub.avatarUrl;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        NameAvatar(name: name, imageUrl: sub.avatarUrl, size: 20),
+        NameAvatar(name: name, imageUrl: avatar, size: 20),
         const SizedBox(width: 7),
         Expanded(
           child: Column(
@@ -467,6 +455,168 @@ class _SubPostRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SubPostsSheet extends StatefulWidget {
+  const _SubPostsSheet({
+    required this.tid,
+    required this.pid,
+    required this.total,
+    required this.initial,
+    required this.users,
+  });
+
+  final int tid;
+  final int pid;
+  final int total;
+  final List<SubPost> initial;
+  final Map<int, TiebaUser> users;
+
+  @override
+  State<_SubPostsSheet> createState() => _SubPostsSheetState();
+}
+
+class _SubPostsSheetState extends State<_SubPostsSheet> {
+  final TiebaRepository _repo = TiebaRepository();
+  final List<SubPost> _items = <SubPost>[];
+  int _pn = 1;
+  bool _loading = false;
+  bool _hasMore = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _items.addAll(widget.initial);
+    _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || !_hasMore) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final page = await _repo.subPosts(
+        tid: widget.tid,
+        pid: widget.pid,
+        pn: _pn,
+      );
+      if (!mounted) return;
+      final existing = _items.map((e) => e.id).toSet();
+      setState(() {
+        for (final sub in page.posts) {
+          if (existing.add(sub.id)) _items.add(sub);
+        }
+        _hasMore = page.hasMore && page.posts.isNotEmpty;
+        _pn += 1;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final count = widget.total > 0 ? widget.total : _items.length;
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+          child: Row(
+            children: <Widget>[
+              Text('楼中楼', style: theme.textTheme.titleMedium),
+              const SizedBox(width: 8),
+              Text(
+                '共 $count 条',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _items.isEmpty && _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _items.isEmpty && _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Text('加载失败'),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: _loadMore,
+                        child: const Text('重试'),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  itemCount: _items.length + 1,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    if (index >= _items.length) return _footer(theme);
+                    final sub = _items[index];
+                    return _SubPostRow(
+                      sub: sub,
+                      author: widget.users[sub.authorId],
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _footer(ThemeData theme) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 14),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (_error != null) {
+      return Center(
+        child: TextButton(onPressed: _loadMore, child: const Text('加载失败，重试')),
+      );
+    }
+    if (_hasMore) {
+      return Center(
+        child: TextButton(onPressed: _loadMore, child: const Text('加载更多')),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Text(
+          '没有更多了',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
     );
   }
 }
