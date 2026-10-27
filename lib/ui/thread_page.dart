@@ -416,10 +416,17 @@ class _PostCard extends StatelessWidget {
 }
 
 class _SubPostRow extends StatelessWidget {
-  const _SubPostRow({required this.sub, this.author});
+  const _SubPostRow({
+    required this.sub,
+    this.author,
+    this.avatarSize = 20,
+    this.large = false,
+  });
 
   final SubPost sub;
   final TiebaUser? author;
+  final double avatarSize;
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
@@ -432,23 +439,31 @@ class _SubPostRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        NameAvatar(name: name, imageUrl: avatar, size: 20),
-        const SizedBox(width: 7),
+        NameAvatar(name: name, imageUrl: avatar, size: avatarSize),
+        SizedBox(width: large ? 10 : 7),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
                 name,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
+                style:
+                    (large
+                            ? theme.textTheme.labelMedium
+                            : theme.textTheme.labelSmall)
+                        ?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
               ),
-              const SizedBox(height: 1),
+              SizedBox(height: large ? 3 : 1),
               ContentView(
                 nodes: sub.content,
-                style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+                style:
+                    (large
+                            ? theme.textTheme.bodyMedium
+                            : theme.textTheme.bodySmall)
+                        ?.copyWith(height: 1.5),
                 maxImages: 0,
               ),
             ],
@@ -576,6 +591,8 @@ class _SubPostsSheetState extends State<_SubPostsSheet> {
                     return _SubPostRow(
                       sub: sub,
                       author: widget.users[sub.authorId],
+                      avatarSize: 34,
+                      large: true,
                     );
                   },
                 ),
