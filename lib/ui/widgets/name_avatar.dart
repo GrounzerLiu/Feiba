@@ -66,7 +66,6 @@ class NameAvatar extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
@@ -74,7 +73,9 @@ class NameAvatar extends StatelessWidget {
           width: 1.5,
         ),
       ),
-      child: child,
+      // Do not rely on the parent Container's decoration clipping here:
+      // explicitly clip the image so every avatar is a true circle.
+      child: ClipOval(child: child),
     );
   }
 }

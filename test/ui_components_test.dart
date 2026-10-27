@@ -1,10 +1,10 @@
 import 'package:feiba/data/models/content_node.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:feiba/data/models/forum_page.dart';
 import 'package:feiba/ui/theme.dart';
+import 'package:feiba/ui/widgets/name_avatar.dart';
 import 'package:feiba/ui/widgets/thread_card.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('thread card renders metadata in dark theme', (
@@ -34,5 +34,18 @@ void main() {
     expect(find.text('一个安静的测试主题帖'), findsOneWidget);
     expect(find.text('测试用户'), findsOneWidget);
     expect(find.text('原神吧'), findsOneWidget);
+  });
+
+  testWidgets('avatar clips its content into a circle', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(Brightness.light),
+        home: const Scaffold(body: NameAvatar(name: '测试', size: 48)),
+      ),
+    );
+
+    expect(find.byType(ClipOval), findsOneWidget);
   });
 }
