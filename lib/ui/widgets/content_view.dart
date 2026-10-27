@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/content_node.dart';
+import '../photo_view_page.dart';
 
-/// Renders Tieba rich content: text runs, links, emoticons and inline images.
+/// Renders Tieba rich content: text runs, links, emoticons and images.
 class ContentView extends StatelessWidget {
   const ContentView({
     super.key,
@@ -22,9 +23,15 @@ class ContentView extends StatelessWidget {
         theme.textTheme.bodyMedium?.copyWith(height: 1.5) ??
         const TextStyle();
 
+    final imageNodes = nodes
+        .where((n) => n.isImage && n.imageUrl != null)
+        .take(maxImages)
+        .toList(growable: false);
+    final imageUrls = imageNodes.map((n) => n.imageUrl!).toList(growable: false);
+
     final blocks = <Widget>[];
     var inline = <InlineSpan>[];
-    var imageCount = 0;
+    var imageIndex = 0;
 
     void flushInline() {
       if (inline.isEmpty) return;
@@ -34,12 +41,21 @@ class ContentView extends StatelessWidget {
 
     for (final node in nodes) {
       if (node.isImage) {
-        if (imageCount >= maxImages) continue;
-        imageCount++;
+        if (imageIndex >= imageUrls.length) continue;
+        final index = imageIndex++;
         flushInline();
         blocks.add(Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
-          child: _ContentImage(url: node.imageUrl!, width: node.width, height: node.height),
+          child: _ContentImage(
+            url: imageUrls[index],
+            width: node.width,
+            height: node.height,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => PhotoViewPage(urls: imageUrls, initialIndex: index),
+              ),
+            ),
+          ),
         ));
         continue;
       }
@@ -87,11 +103,17 @@ class ContentView extends StatelessWidget {
 }
 
 class _ContentImage extends StatelessWidget {
-  const _ContentImage({required this.url, this.width, this.height});
+  const _ContentImage({
+    required this.url,
+    this.width,
+    this.height,
+    this.onTap,
+  });
 
   final String url;
   final int? width;
   final int? height;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -99,32 +121,35 @@ class _ContentImage extends StatelessWidget {
     if (width != null && height != null && width! > 0 && height! > 0) {
       aspect = width! / height!;
     }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.network(
-        url,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          height: 120,
-          alignment: Alignment.center,
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          child: const Icon(Icons.broken_image_outlined, size: 32),
-        ),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return AspectRatio(
-            aspectRatio: aspect ?? 4 / 3,
-            child: Container(
-              alignment: Alignment.center,
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(
+            height: 120,
+            alignment: Alignment.center,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: const Icon(Icons.broken_image_outlined, size: 32),
+          ),
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return AspectRatio(
+              aspectRatio: aspect ?? 4 / 3,
+              child: Container(
+                alignment: Alignment.center,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

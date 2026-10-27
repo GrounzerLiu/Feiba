@@ -1,5 +1,6 @@
 import '../core/tieba_client.dart';
 import 'models/forum_page.dart';
+import 'models/forum_search.dart';
 import 'models/thread_page.dart';
 import 'models/tieba_user.dart';
 
@@ -44,6 +45,29 @@ class TiebaRepository {
       hasMore: page is Map ? _int(page['has_more']) != 0 : false,
     );
   }
+
+  /// Searches forums by keyword via the mobile web endpoint.
+  Future<List<ForumSearchResult>> searchForums(String keyword) async {
+    final json = await client.webGetJson('/mo/q/search/forum', {
+      'word': keyword,
+      'pn': '1',
+      'rn': '20',
+    });
+    final data = json['data'];
+    if (data is! Map) return const <ForumSearchResult>[];
+    final raw = <dynamic>[
+      ..._list(data['exactMatch']),
+      ..._list(data['fuzzyMatch']),
+    ];
+    return raw
+        .whereType<Map>()
+        .map((e) => ForumSearchResult.fromJson(e.cast<String, dynamic>()))
+        .where((e) => e.name.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  /// Validates a BDUSS and returns the bound account, or null when invalid.
+  Future<TiebaAccount?> checkAccount(String bduss) => client.fetchAccount(bduss);
 
   /// Posts of a thread.
   Future<ThreadPageData> threadPage(int tid, {int pn = 1}) async {
