@@ -2,7 +2,7 @@
 
 > 目标：把 Feiba 从“能用”提升为“愿意每天打开”的贴吧客户端界面。
 > 参考：TiebaLite 4.x 的信息层级、底部导航、信息流卡片和帖子详情结构。
-> 实现：Flutter / Material 3，现有 `lib/data` 旧 JSON 数据链路。
+> 实现：Flutter / Material 3。浏览链路使用 `lib/data` 旧 JSON；账号动作通过 `lib/core/tieba_api.dart` 调协议层。
 
 ## 1. 参考与素材边界
 
@@ -49,8 +49,8 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 1. **首页**：搜索入口、常逛吧、热门讨论信息流、兴趣分类；
 2. **发现**：按兴趣浏览、热门吧列表、搜索入口；
-3. **消息**：回复/@/系统通知的空态与登录引导；
-4. **我的**：账号、统计占位、关注/历史/收藏、设置与关于。
+3. **消息**：登录后从协议层拉取回复/@；游客看到登录引导与使用说明；
+4. **我的**：账号资料、统计、关注/历史/收藏、外观、缓存、关于与开源许可。
 
 首页/发现/消息/我的使用 `IndexedStack` 保持状态；登录相关页面在切换 tab 时刷新。
 桌面端暂沿用同一套底部导航，后续可为宽屏切换 NavigationRail。
@@ -79,13 +79,14 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 - 楼层卡片：头像、用户名、时间、楼主/楼层标记；
 - 富文本 `ContentView`：文本、表情、链接、图片网格；
 - 楼中楼先在楼层内展示预览，点击后在底部 BottomSheet 中分页展开；
-- 底部悬浮回复栏 + 点赞入口（当前为交互占位）；
+- 底部悬浮回复栏 + 真实点赞接口（`setAgree`）；游客点击时弹出登录引导；
+- AppBar 支持本地收藏与复制帖子链接；
 - 楼中楼展开上限从 10 页放宽到 100 页。
 
 ### 搜索页（SearchPage）
 
 - 返回键 + 圆角搜索框 + 搜索按钮；
-- 未搜索时展示热门搜索与引导空态；
+- 未搜索时展示最近搜索、热门搜索与引导空态；最近搜索保存在本机；
 - 结果卡片：吧头像、吧名、关注/帖子数；
 - 加载、空结果、错误、重试。
 
@@ -93,15 +94,17 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 - 蓝色渐变品牌头 + 登录说明；
 - BDUSS 默认隐藏，可切换显示；STOKEN 可选；
-- 登录按钮、状态消息、退出登录；
+- 登录按钮、状态消息、退出登录；游客可直接返回继续浏览；
 - “如何获取 BDUSS”折叠说明；
 - 凭据仅本机保存的提示。
 
 ### 消息 / 我的
 
-- 消息：全部/回复/@ 筛选；未登录引导登录；登录后空态提示；
-- 我的：渐变个人信息头、统计占位、菜单卡片、关于对话框；
-- 未接入的数据统一用“—”或“正在接入中”提示，不伪造数据。
+- 消息：全部/回复/@ 筛选；登录后展示真实回复与 @；游客展示用途说明与登录 CTA；
+- 我的：渐变个人信息头；登录后用协议层 `fetchUserInfo` 填充关注/粉丝/发帖；游客展示本地浏览/收藏/关注统计；
+- 本地空间：浏览历史、收藏、本地关注三个 tab，均可在未登录状态使用；
+- 设置：浅色/深色/跟随系统、清理图片缓存、关于、开源许可。
+- 账号相关动作（点赞、关注、签到、消息、资料）通过协议层；未登录时统一弹出登录引导，不把游客挡在浏览之外。
 
 ## 5. 组件
 
@@ -113,6 +116,11 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 | NameAvatar | lib/ui/widgets/name_avatar.dart | 网络头像 / 首字母色块 |
 | SectionHeader | lib/ui/widgets/section_header.dart | 分组标题与动作 |
 | EmptyState | lib/ui/widgets/empty_state.dart | 统一空态 |
+| LibraryPage | lib/ui/library_page.dart | 本地历史/收藏/关注 |
+| LocalLibrary | lib/core/local_library.dart | 游客本地历史、收藏、关注与搜索 |
+| ThemeController | lib/core/theme_controller.dart | 外观模式持久化 |
+| TiebaApi | lib/core/tieba_api.dart | 账号动作与通知的协议桥 |
+| AuthGate | lib/ui/auth_gate.dart | 游客登录引导 BottomSheet |
 | format.dart | lib/ui/format.dart | 数字缩写、相对时间 |
 
 ## 6. 状态与错误
@@ -125,28 +133,33 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 ## 7. 数据边界
 
-当前 UI 仍使用 `lib/data/tieba_repository.dart` 的旧 JSON 链路；
-协议层 `lib/protocol` 已全量移植，但尚未替换 UI 数据源。
+浏览链路继续使用 `lib/data/tieba_repository.dart` 的旧 JSON；账号动作通过
+`lib/core/tieba_api.dart` 调协议层，避免为了一个按钮整体切换数据源。
 
-本版新增/修改的交互：
+已接入协议层：
 
-- 吧页排序：`latest reply` / `latest post` / `good`（`sort_type` / `is_good`）；
-- 帖子页楼中楼展开：最多 100 页；
-- 登录状态刷新：切换 tab 时重建登录相关 tab。
+- 登录后消息：`fetchReplies` / `fetchAts`；
+- 账号资料与关注/粉丝/发帖统计：`fetchLogin` + `fetchUserInfo`；
+- 吧关注/取消关注：`followForum` / `unfollowForum`；
+- 吧签到：`signForum`；
+- 帖子点赞/取消：`setAgree`；
+- 游客本地历史、收藏、关注、最近搜索和外观设置：SharedPreferences，受限环境自动退回内存。
 
 暂未接入：
 
-- 回复/点赞/关注/收藏的真实写操作；
-- 消息列表数据；
-- 用户主页真实统计；
-- 设置持久化；
-- 视频播放。
+- 发帖/回复编辑器；
+- 收藏与账号收藏的同步；
+- 视频播放；
+- 吧务/聊天等深水区 UI。
 
-这些位置都明确标注“正在接入中”，避免误导。
+这些位置明确标注，避免游客误以为操作已成功。
 
 ## 8. 测试
 
 - `test/widget_test.dart`：壳层渲染、底部导航、发现页切换；
-- `test/ui_components_test.dart`：ThreadCard 深色主题渲染；
+- `test/ui_components_test.dart`：ThreadCard 深色主题、NameAvatar 圆形裁切；
+- `test/local_library_test.dart`：游客历史/收藏/关注、最近搜索、主题持久化；
+- `test/guest_ui_test.dart`：游客个人页、本地空间 tabs；
+- `test/tieba_api_test.dart`：未登录时协议桥的拒绝与错误文案；
 - 首页通过 `HomePage(loadFeed: false)` 支持无网络组件测试；
 - 组件测试不依赖真实贴吧接口。

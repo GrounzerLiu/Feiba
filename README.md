@@ -12,11 +12,11 @@
 | P1 | 协议基座（aiotieba 移植）：三种传输、protobuf、账号 crypto、读写接口 | 已完成 |
 | P2 | 只读主链路：吧页帖子列表 → 帖子详情 → 楼中楼 | 已完成（旧 JSON 链路） |
 | P3 | 媒体：图片、WebView、视频 | 部分完成（图片查看/保存） |
-| P4 | 登录与多账号 | 部分完成（BDUSS 登录） |
+| P4 | 登录与多账号 | 部分完成（BDUSS 登录；资料/关注/点赞/签到走协议层） |
 | P5 | 写操作：发帖、回复、点赞、收藏 | 待开始 |
-| P6 | 搜索、用户主页、收藏、历史、热搜 | 部分完成（吧搜索/发现） |
-| P7 | 设置（主题、习惯、屏蔽、账号、关于） | 界面占位 |
-| P8 | Android 专属：签到、通知、快捷磁贴 | 待开始 |
+| P6 | 搜索、用户主页、收藏、历史、热搜 | 部分完成（吧搜索、本地历史/收藏/关注、最近搜索） |
+| P7 | 设置（主题、习惯、屏蔽、账号、关于） | 部分完成（外观/缓存/关于/许可） |
+| P8 | Android 专属：签到、通知、快捷磁贴 | 部分完成（吧签到、消息列表） |
 | P9 | 桌面适配：窗口记忆、快捷键、右键菜单 | 待开始 |
 | P10 | 打包发布：签名 APK、Windows MSI | 待开始 |
 
@@ -35,13 +35,14 @@
 
 - 首页：搜索入口、常逛吧、热门讨论信息流、兴趣分类
 - 发现：按兴趣浏览、热门吧列表
-- 消息：回复/@/系统通知空态与登录引导
-- 我的：账号、统计占位、关注/历史/收藏、设置与关于
+- 消息：登录后展示真实回复/@；游客展示用途说明与登录引导
+- 我的：账号资料/统计、本地历史/收藏/关注、外观/缓存/关于/开源许可
 - 吧页：渐变吧头、排序 chips、缩略图信息流
-- 帖子页：楼层卡片、富文本/图片网格、楼中楼展开、底部回复栏
+- 帖子页：楼层卡片、富文本/图片网格、楼中楼 BottomSheet、收藏/复制链接、点赞接口
 
-设计说明与许可证边界见 [docs/ui-design.md](docs/ui-design.md)。当前 UI 仍使用旧的
-`lib/data` JSON 链路；协议层已全量移植，切换数据源是下一步。
+设计说明与许可证边界见 [docs/ui-design.md](docs/ui-design.md)。浏览链路仍使用旧的
+`lib/data` JSON；登录后的消息、资料、关注、点赞、签到已通过 `lib/core/tieba_api.dart`
+调用协议层，游客历史/收藏/关注保存在本机。
 
 > 说明：TiebaLite 采用 GPL-3.0，而 Feiba 采用 MIT。本版只参考其布局/交互，
 > 未复制其代码、图片、字体或 drawable；如要直接使用其素材，需要先调整项目许可证或取得授权。
@@ -55,7 +56,7 @@
 - 已覆盖 aiotieba 4.8.2 的全部 API 模块：吧/帖/楼中楼、搜索、用户/主页/历史、通知、吧务、恢复/申诉、排行、图片、全部读写操作，以及 BLCP/WebSocket 聊天/IM
 - `proto/` 为移植的 protobuf schema，生成代码在 `lib/protocol/generated/`
 
-> 当前 Flutter UI 仍使用旧的 `lib/core/tieba_client.dart` JSON 实现；协议层已全量移植，切换 UI 数据源是下一步。覆盖清单见 [docs/port-checklist.md](docs/port-checklist.md)，设计与验证边界见 [docs/aiotieba-port.md](docs/aiotieba-port.md)。
+> 浏览链路仍使用旧的 `lib/core/tieba_client.dart` JSON 实现；账号动作通过 `lib/core/tieba_api.dart` 使用协议层。覆盖清单见 [docs/port-checklist.md](docs/port-checklist.md)，设计与验证边界见 [docs/aiotieba-port.md](docs/aiotieba-port.md)。
 
 联调：
 

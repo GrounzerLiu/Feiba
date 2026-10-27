@@ -80,9 +80,13 @@ class TiebaClient {
       ...fields,
     };
     final String? bdussValue = bduss ?? Session.instance.bduss;
-    if (bdussValue != null && bdussValue.isNotEmpty) params['BDUSS'] = bdussValue;
+    if (bdussValue != null && bdussValue.isNotEmpty) {
+      params['BDUSS'] = bdussValue;
+    }
     final String? stokenValue = stoken ?? Session.instance.stoken;
-    if (stokenValue != null && stokenValue.isNotEmpty) params['stoken'] = stokenValue;
+    if (stokenValue != null && stokenValue.isNotEmpty) {
+      params['stoken'] = stokenValue;
+    }
     params['sign'] = tiebaSign(params);
 
     final body = params.entries

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/local_library.dart';
 import '../core/session.dart';
 import '../data/models/forum_page.dart';
 import '../data/tieba_repository.dart';
@@ -40,7 +41,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    LocalLibrary.instance.addListener(_onLibraryChanged);
     if (widget.loadFeed) _load();
+  }
+
+  @override
+  void dispose() {
+    LocalLibrary.instance.removeListener(_onLibraryChanged);
+    super.dispose();
+  }
+
+  void _onLibraryChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
@@ -76,9 +88,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openThread(ThreadSummary thread) {
+    final author = _users[thread.authorId];
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ThreadPage(tid: thread.tid, title: thread.title),
+        builder: (_) => ThreadPage(
+          tid: thread.tid,
+          title: thread.title,
+          forumName: '原神吧',
+          authorName: author?.displayName as String?,
+        ),
       ),
     );
   }
@@ -142,6 +160,38 @@ class _HomePageState extends State<HomePage> {
                 child: _SearchEntry(onTap: _openSearch),
               ),
             ),
+            if (LocalLibrary.instance.history.isNotEmpty) ...<Widget>[
+              const SliverToBoxAdapter(
+                child: SectionHeader(title: '最近浏览', subtitle: '从上次停下的地方继续'),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 82,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: LocalLibrary.instance.history.take(6).length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final item = LocalLibrary.instance.history[index];
+                      return _RecentThreadCard(
+                        item: item,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ThreadPage(
+                              tid: item.tid,
+                              title: item.title,
+                              forumName: item.forumName,
+                              authorName: item.authorName,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
             const SliverToBoxAdapter(
               child: SectionHeader(title: '常逛的吧', subtitle: '挑一个感兴趣的角落'),
             ),
@@ -236,6 +286,66 @@ class _HomePageState extends State<HomePage> {
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentThreadCard extends StatelessWidget {
+  const _RecentThreadCard({required this.item, required this.onTap});
+
+  final LocalThread item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 210,
+          padding: const EdgeInsets.fromLTRB(13, 11, 13, 10),
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelLarge,
+              ),
+              const Spacer(),
+              Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.history_rounded,
+                    size: 13,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      item.forumName.isEmpty ? '浏览过的帖子' : item.forumName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/local_library.dart';
 import '../data/models/forum_search.dart';
 import '../data/tieba_repository.dart';
 import 'forum_page.dart';
@@ -50,6 +51,7 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _search() async {
     final keyword = _controller.text.trim();
     if (keyword.isEmpty) return;
+    LocalLibrary.instance.recordSearch(keyword);
     FocusScope.of(context).unfocus();
     setState(() {
       _loading = true;
@@ -134,6 +136,41 @@ class _SearchPageState extends State<SearchPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    if (LocalLibrary
+                        .instance
+                        .recentSearches
+                        .isNotEmpty) ...<Widget>[
+                      Row(
+                        children: <Widget>[
+                          Text('最近搜索', style: theme.textTheme.titleMedium),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () {
+                              LocalLibrary.instance.clearSearches();
+                              setState(() {});
+                            },
+                            child: const Text('清空'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Widget>[
+                          for (final recent
+                              in LocalLibrary.instance.recentSearches)
+                            ActionChip(
+                              label: Text(recent),
+                              onPressed: () {
+                                _controller.text = recent;
+                                _search();
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     Text('热门搜索', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 12),
                     Wrap(

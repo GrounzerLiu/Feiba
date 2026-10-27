@@ -1,17 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../core/local_library.dart';
+import '../core/session.dart';
+import '../core/tieba_api.dart';
 import '../data/models/thread_page.dart';
 import '../data/models/tieba_user.dart';
 import '../data/tieba_repository.dart';
+import 'auth_gate.dart';
 import 'format.dart';
 import 'widgets/content_view.dart';
 import 'widgets/name_avatar.dart';
 
 class ThreadPage extends StatefulWidget {
-  const ThreadPage({super.key, required this.tid, this.title});
+  const ThreadPage({
+    super.key,
+    required this.tid,
+    this.title,
+    this.forumName,
+    this.authorName,
+  });
 
   final int tid;
   final String? title;
+  final String? forumName;
+  final String? authorName;
 
   @override
   State<ThreadPage> createState() => _ThreadPageState();
@@ -28,6 +41,7 @@ class _ThreadPageState extends State<ThreadPage> {
   bool _loading = false;
   bool _hasMore = true;
   String? _error;
+  bool _liked = false;
   String _title = '';
 
   @override
@@ -62,6 +76,7 @@ class _ThreadPageState extends State<ThreadPage> {
         _posts.clear();
       }
     });
+    final wasEmpty = _posts.isEmpty;
     try {
       final data = await _repo.threadPage(widget.tid, pn: _page);
       if (!mounted) return;
@@ -72,6 +87,18 @@ class _ThreadPageState extends State<ThreadPage> {
         _hasMore = data.hasMore;
         _page += 1;
       });
+      if (wasEmpty) {
+        final first = data.posts.isEmpty ? null : data.posts.first;
+        final author = first == null
+            ? widget.authorName
+            : data.users[first.authorId]?.displayName ?? widget.authorName;
+        await LocalLibrary.instance.recordThread(
+          tid: widget.tid,
+          title: _title,
+          forumName: widget.forumName ?? '',
+          authorName: author,
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());
@@ -108,9 +135,65 @@ class _ThreadPageState extends State<ThreadPage> {
     );
   }
 
-  void _showReplyComposer() {
+  Future<void> _showReplyComposer() async {
+    if (!Session.instance.isLoggedIn) {
+      final loggedIn = await ensureLoggedIn(
+        context,
+        action: '回复帖子',
+        description: '游客可以浏览所有帖子和楼中楼；登录后才能回复、点赞和收发消息。',
+      );
+      if (!loggedIn || !mounted) return;
+    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('回复编辑器正在接入中')));
+  }
+
+  Future<void> _toggleFavorite() async {
+    final added = await LocalLibrary.instance.toggleFavorite(
+      tid: widget.tid,
+      title: _title,
+      forumName: widget.forumName ?? '',
+      authorName: widget.authorName,
+    );
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(added ? '已收藏，可在“我的空间”查看' : '已取消收藏')));
+  }
+
+  Future<void> _copyLink() async {
+    await Clipboard.setData(
+      ClipboardData(text: 'https://tieba.baidu.com/p/${widget.tid}'),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('帖子链接已复制')));
+  }
+
+  Future<void> _requireLoginForLike() async {
+    if (!Session.instance.isLoggedIn) {
+      final loggedIn = await ensureLoggedIn(
+        context,
+        action: '点赞帖子',
+        description: '浏览和搜索不需要登录；登录后可以为喜欢的楼层点赞。',
+      );
+      if (!loggedIn || !mounted) return;
+    }
+    try {
+      final undo = _liked;
+      await TiebaApi.instance.setThreadAgree(widget.tid, undo: undo);
+      if (!mounted) return;
+      setState(() => _liked = !undo);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(undo ? '已取消点赞' : '点赞成功')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('点赞失败：${tiebaErrorMessage(error)}')),
+      );
+    }
   }
 
   @override
@@ -125,10 +208,19 @@ class _ThreadPageState extends State<ThreadPage> {
         ),
         actions: <Widget>[
           IconButton(
+            tooltip: LocalLibrary.instance.isFavorite(widget.tid)
+                ? '取消收藏'
+                : '收藏',
+            onPressed: _toggleFavorite,
+            icon: Icon(
+              LocalLibrary.instance.isFavorite(widget.tid)
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded,
+            ),
+          ),
+          IconButton(
             tooltip: '分享',
-            onPressed: () =>
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(const SnackBar(content: Text('分享功能正在接入中'))),
+            onPressed: _copyLink,
             icon: const Icon(Icons.ios_share_rounded),
           ),
         ],
@@ -173,10 +265,13 @@ class _ThreadPageState extends State<ThreadPage> {
               ),
               const SizedBox(width: 10),
               IconButton.filledTonal(
-                tooltip: '点赞',
-                onPressed: () => ScaffoldMessenger.of(context)
-                    .showSnackBar(const SnackBar(content: Text('点赞功能正在接入中'))),
-                icon: const Icon(Icons.favorite_border_rounded),
+                tooltip: _liked ? '取消点赞' : '点赞',
+                onPressed: _requireLoginForLike,
+                icon: Icon(
+                  _liked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                ),
               ),
             ],
           ),

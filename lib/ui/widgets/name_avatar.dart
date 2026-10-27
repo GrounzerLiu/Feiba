@@ -54,14 +54,14 @@ class NameAvatar extends StatelessWidget {
       ),
     );
     final url = imageUrl;
-    final child = url == null || url.isEmpty
-        ? fallback
+    final image = url == null || url.isEmpty
+        ? null
         : Image.network(
             url,
             fit: BoxFit.cover,
             width: size,
             height: size,
-            errorBuilder: (_, _, _) => fallback,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
           );
     return Container(
       width: size,
@@ -75,7 +75,12 @@ class NameAvatar extends StatelessWidget {
       ),
       // Do not rely on the parent Container's decoration clipping here:
       // explicitly clip the image so every avatar is a true circle.
-      child: ClipOval(child: child),
+      child: ClipOval(
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[fallback, image ?? const SizedBox.shrink()],
+        ),
+      ),
     );
   }
 }

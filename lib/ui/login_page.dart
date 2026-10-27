@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/session.dart';
+import '../core/tieba_api.dart';
 import '../core/tieba_client.dart';
 import '../data/tieba_repository.dart';
 
@@ -55,6 +56,7 @@ class _LoginPageState extends State<LoginPage> {
         });
         return;
       }
+      TiebaApi.instance.reset();
       await Session.instance.save(
         bduss: value,
         stoken: _stoken.text.trim(),
@@ -83,6 +85,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _logout() async {
+    TiebaApi.instance.reset();
     await Session.instance.clear();
     if (!mounted) return;
     setState(() {
@@ -146,7 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                       Text(
                         loggedIn
                             ? '当前账号 ${Session.instance.userName ?? ''}'
-                            : '使用贴吧 BDUSS 访问你关注的吧',
+                            : '浏览和搜索无需登录；登录后使用回复、消息和账号功能',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.78),
                         ),
@@ -239,6 +242,39 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ],
+          if (Session.instance.persistenceError != null) ...<Widget>[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      Session.instance.persistenceError!,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: const Text('先逛逛，暂不登录'),
+          ),
           const SizedBox(height: 22),
           Container(
             decoration: BoxDecoration(

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../core/local_library.dart';
+import '../core/session.dart';
+import '../core/tieba_api.dart';
 import '../data/models/forum_page.dart';
 import '../data/tieba_repository.dart';
+import 'auth_gate.dart';
 import 'format.dart';
 import 'thread_page.dart';
 import 'widgets/name_avatar.dart';
@@ -28,7 +32,6 @@ class _ForumPageState extends State<ForumPage> {
   bool _loading = false;
   bool _hasMore = true;
   String? _error;
-  bool _followed = false;
 
   @override
   void initState() {
@@ -84,6 +87,60 @@ class _ForumPageState extends State<ForumPage> {
     }
   }
 
+  Future<void> _toggleFollow() async {
+    final currently = LocalLibrary.instance.isForumFollowed(widget.forumName);
+    final loggedIn = Session.instance.isLoggedIn;
+    if (loggedIn) {
+      try {
+        await TiebaApi.instance.followForum(
+          widget.forumName,
+          follow: !currently,
+          fid: _forum?.id,
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('关注失败：${tiebaErrorMessage(error)}')),
+        );
+        return;
+      }
+    }
+    final followed = await LocalLibrary.instance.toggleForumFollow(
+      widget.forumName,
+    );
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          followed ? (loggedIn ? '已关注（已同步账号）' : '已关注（保存在本机）') : '已取消关注',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _signForum() async {
+    if (!Session.instance.isLoggedIn) {
+      final loggedIn = await ensureLoggedIn(
+        context,
+        action: '签到',
+        description: '登录后可以给这个吧签到；浏览和搜索仍然不需要登录。',
+      );
+      if (!loggedIn || !mounted) return;
+    }
+    try {
+      await TiebaApi.instance.signForum(widget.forumName);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('签到成功')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('签到失败：${tiebaErrorMessage(error)}')),
+      );
+    }
+  }
+
   void _changeSort(int value) {
     if (_sort == value) return;
     setState(() => _sort = value);
@@ -98,6 +155,11 @@ class _ForumPageState extends State<ForumPage> {
       appBar: AppBar(
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: <Widget>[
+          IconButton(
+            tooltip: '签到',
+            onPressed: _signForum,
+            icon: const Icon(Icons.how_to_reg_outlined),
+          ),
           IconButton(
             tooltip: '刷新',
             onPressed: () => _load(reset: true),
@@ -117,17 +179,10 @@ class _ForumPageState extends State<ForumPage> {
                 child: _ForumHeader(
                   forum: _forum,
                   fallbackName: widget.forumName,
-                  followed: _followed,
-                  onFollow: () {
-                    setState(() => _followed = !_followed);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          _followed ? '已加入关注（界面演示）' : '已取消关注（界面演示）',
-                        ),
-                      ),
-                    );
-                  },
+                  followed: LocalLibrary.instance.isForumFollowed(
+                    widget.forumName,
+                  ),
+                  onFollow: _toggleFollow,
                 ),
               ),
             ),
@@ -190,8 +245,12 @@ class _ForumPageState extends State<ForumPage> {
                       forumName: title,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) =>
-                              ThreadPage(tid: thread.tid, title: thread.title),
+                          builder: (_) => ThreadPage(
+                            tid: thread.tid,
+                            title: thread.title,
+                            forumName: title,
+                            authorName: user?.displayName as String?,
+                          ),
                         ),
                       ),
                     ),
