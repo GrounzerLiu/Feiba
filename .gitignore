@@ -46,3 +46,19 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Local tooling / generated build artifacts
+/android/.gradle/
+/android/.kotlin/
+/android/local.properties
+/windows/flutter/ephemeral/
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Local protocol probe scripts
+**/_probe*.dart
+
+# Note: lib/protocol/generated/ is produced by protoc but intentionally kept
+# in version control so a fresh checkout builds without the protoc toolchain.
