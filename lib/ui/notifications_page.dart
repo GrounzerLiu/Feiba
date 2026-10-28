@@ -6,6 +6,8 @@ import '../protocol/models/notification.dart';
 import 'format.dart';
 import 'login_page.dart';
 import 'thread_page.dart';
+import 'route_transitions.dart';
+import 'widgets/loading_indicator.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/name_avatar.dart';
 
@@ -197,7 +199,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ] else if (_loading && items.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
+                child: LoadingIndicator(),
               )
             else if (_error != null && items.isEmpty)
               SliverFillRemaining(
@@ -268,9 +270,7 @@ class _NotificationCard extends StatelessWidget {
         onTap: tid == 0
             ? null
             : () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ThreadPage(tid: tid, forumName: fname),
-                ),
+                threadPageRoute<void>(ThreadPage(tid: tid, forumName: fname)),
               ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),

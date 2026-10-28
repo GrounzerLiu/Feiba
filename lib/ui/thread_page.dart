@@ -12,6 +12,7 @@ import 'format.dart';
 import 'widgets/content_view.dart';
 import 'widgets/dismissible_sheet.dart';
 import 'widgets/name_avatar.dart';
+import 'widgets/loading_indicator.dart';
 
 class ThreadPage extends StatefulWidget {
   const ThreadPage({
@@ -284,7 +285,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Widget _buildBody(ThemeData theme) {
     if (_posts.isEmpty) {
-      if (_loading) return const Center(child: CircularProgressIndicator());
+      if (_loading) return const LoadingIndicator(minHeight: 260);
       if (_error != null) {
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -677,7 +678,7 @@ class _SubPostsSheetState extends State<_SubPostsSheet> {
         const Divider(height: 1),
         Expanded(
           child: _items.isEmpty && _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? const LoadingIndicator(minHeight: 180)
               : _items.isEmpty && _error != null
               ? Center(
                   child: Column(

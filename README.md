@@ -118,6 +118,12 @@ makensis tool/feiba_setup.nsi
 输出：`build/installer/Feiba-Setup-0.1.0.exe`。安装器创建开始菜单和桌面快捷方式，并注册卸载程序。
 安装包没有商业代码签名证书，Windows SmartScreen 会提示“未知发布者”；选择“运行”即可。
 
+## 首页与帖子卡片
+
+- 首页默认显示关注的吧；最近点击过的吧以带头像的 Material 3 ActionChip 横向排列在关注的吧上方。
+- 吧外帖子使用响应式 ThreadGrid，宽屏显示更多列，并带可点击的吧 chip。
+- 帖子详情使用淡入加滑动的页面转场。
+
 ## 自适应布局
 
 - < 600dp：底部导航栏

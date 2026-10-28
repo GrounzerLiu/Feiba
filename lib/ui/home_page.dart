@@ -9,16 +9,18 @@ import '../data/models/forum_summary.dart';
 import '../data/models/tieba_user.dart';
 import '../data/protocol_browse_repository.dart';
 import 'discover_page.dart';
-import 'format.dart';
 import 'forum_page.dart';
 import 'login_page.dart';
 import 'search_page.dart';
 import 'thread_page.dart';
+import 'route_transitions.dart';
 import 'user_page.dart';
-import 'widgets/forum_avatar.dart';
+import 'widgets/forum_chip.dart';
+import 'widgets/forum_follow_card.dart';
+import 'widgets/loading_indicator.dart';
 import 'widgets/morphing_shape.dart';
 import 'widgets/name_avatar.dart';
-import 'widgets/thread_card.dart';
+import 'widgets/thread_grid.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, this.loadFeed = true, this.onExplore});
@@ -30,7 +32,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
 
   bool _loading = false;
@@ -41,6 +44,12 @@ class _HomePageState extends State<HomePage> {
   List<TiebaUser> _people = const <TiebaUser>[];
   ThreadFeed _feed = ThreadFeed.empty;
   List<String> _recentForums = const <String>[];
+
+  late final TabController _tabs = TabController(
+    length: 3,
+    vsync: this,
+    initialIndex: 1,
+  );
 
   @override
   void initState() {
@@ -53,6 +62,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     LocalLibrary.instance.removeListener(_onLibraryChanged);
+    _tabs.dispose();
     super.dispose();
   }
 
@@ -195,9 +205,11 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _openForum(String name) => Navigator.of(
-    context,
-  ).push(MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)));
+  void _openForum(String name) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)),
+    );
+  }
 
   void _openUser(TiebaUser user) => Navigator.of(context).push(
     MaterialPageRoute<void>(
@@ -208,8 +220,8 @@ class _HomePageState extends State<HomePage> {
   void _openThread(ThreadSummary thread) {
     final author = _feed.users[thread.authorId];
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ThreadPage(
+      threadPageRoute(
+        ThreadPage(
           tid: thread.tid,
           title: thread.title,
           forumName: thread.forumName,
@@ -238,10 +250,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        body: Column(
+    return Scaffold(
+      body: Column(
           children: <Widget>[
             SafeArea(
               bottom: false,
@@ -297,30 +307,29 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            const TabBar(
-              labelStyle: TextStyle(fontWeight: FontWeight.w700),
+            TabBar(
+              controller: _tabs,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700),
               unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500),
               dividerColor: Colors.transparent,
               tabs: <Widget>[
                 Tab(text: '动态'),
                 Tab(text: '吧'),
                 Tab(text: '吧友'),
-                Tab(text: '看过'),
               ],
             ),
             Expanded(
               child: TabBarView(
+                controller: _tabs,
                 children: <Widget>[
                   _feedTab(),
                   _forumsTab(),
                   _peopleTab(),
-                  _recentTab(),
                 ],
               ),
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -335,7 +344,7 @@ class _HomePageState extends State<HomePage> {
           if (_accountWarning != null && _loggedIn)
             _WarningNote(text: _accountWarning!),
           if (_loading && _feed.threads.isEmpty)
-            const _ThreadSkeleton()
+            const LoadingIndicator(minHeight: 220)
           else if (_error != null && _feed.threads.isEmpty)
             _ErrorCard(message: _error!, onRetry: _load)
           else if (_feed.threads.isEmpty)
@@ -358,17 +367,12 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            for (final thread in _feed.threads)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ThreadCard(
-                  thread: thread,
-                  authorName: _feed.users[thread.authorId]?.displayName,
-                  authorAvatar: _feed.users[thread.authorId]?.avatarUrl,
-                  forumName: thread.forumName,
-                  onTap: () => _openThread(thread),
-                ),
-              ),
+            ThreadGrid(
+              feed: _feed,
+              repo: _repo,
+              onThreadTap: _openThread,
+              onForumTap: _openForum,
+            ),
           ],
         ],
       ),
@@ -383,15 +387,41 @@ class _HomePageState extends State<HomePage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: <Widget>[
+          if (_recentForums.isNotEmpty) ...<Widget>[
+            Text(
+              '看过的吧',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 9),
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _recentForums.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final name = _recentForums[index];
+                  return ForumChip(
+                    name: name,
+                    repo: _repo,
+                    onPressed: () => _openForum(name),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           Text(
-            _loggedIn ? '来自贴吧账号' : '保存在本机',
+            _loggedIn ? '关注的吧' : '本地关注的吧',
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 9),
           if (_loading && _forums.isEmpty)
-            const _ForumListSkeleton()
+            const LoadingIndicator(minHeight: 160)
           else if (_forums.isEmpty)
             _TabEmpty(
               icon: Icons.star_border_rounded,
@@ -404,20 +434,18 @@ class _HomePageState extends State<HomePage> {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate:
-                  const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 300,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 1.45,
-                  ),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 300,
+                mainAxisExtent: 70,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+              ),
               itemCount: _forums.length,
               itemBuilder: (context, index) {
                 final forum = _forums[index];
-                return _FollowedForumCard(
-                  width: null,
-                  repo: _repo,
+                return ForumFollowCard(
                   forum: forum,
+                  repo: _repo,
                   onTap: () => _openForum(forum.name),
                 );
               },
@@ -432,7 +460,9 @@ class _HomePageState extends State<HomePage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: <Widget>[
-        if (!_loggedIn)
+        if (_loading && _people.isEmpty)
+          const LoadingIndicator(minHeight: 220)
+        else if (!_loggedIn)
           _TabEmpty(
             icon: Icons.people_outline_rounded,
             title: '登录后查看关注的人',
@@ -463,134 +493,6 @@ class _HomePageState extends State<HomePage> {
             ),
         ],
       ],
-    );
-  }
-
-  Widget _recentTab() {
-    final theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      children: <Widget>[
-        if (_recentForums.isEmpty)
-          const _TabEmpty(
-            icon: Icons.history_rounded,
-            title: '还没有看过的吧',
-            description: '浏览过的贴吧会记录在这里，方便你再次进入。',
-            embedded: true,
-          )
-        else ...<Widget>[
-          Text(
-            '最近浏览 ${_recentForums.length} 个吧',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          for (final name in _recentForums)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Material(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(14),
-                child: ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  onTap: () => _openForum(name),
-                  leading: NameAvatar(name: name, size: 36),
-                  title: Text(name),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                ),
-              ),
-            ),
-        ],
-      ],
-    );
-  }
-}
-
-class _FollowedForumCard extends StatelessWidget {
-  const _FollowedForumCard({
-    required this.forum,
-    required this.repo,
-    required this.onTap,
-    this.width = 158,
-  });
-
-  final ForumSummary forum;
-  final ProtocolBrowseRepository repo;
-  final VoidCallback onTap;
-  final double? width;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final detail = forum.hotNum > 0
-        ? '今日热帖 ${forum.hotNum}'
-        : forum.memberNum > 0
-        ? '${compactCount(forum.memberNum)} 成员'
-        : forum.isLocal
-        ? '本地关注'
-        : '进入贴吧';
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          width: width,
-          padding: const EdgeInsets.all(13),
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  ForumAvatar(name: forum.name, repo: repo, size: 34),
-                  const Spacer(),
-                  if (forum.isSigned)
-                    Icon(
-                      Icons.verified_rounded,
-                      size: 16,
-                      color: theme.colorScheme.primary,
-                    ),
-                  if (forum.level > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Text(
-                        'Lv.${forum.level}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const Spacer(),
-              Text(
-                forum.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(fontSize: 14),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                detail,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -751,82 +653,6 @@ class _ErrorCard extends StatelessWidget {
           TextButton(onPressed: onRetry, child: const Text('重试')),
         ],
       ),
-    );
-  }
-}
-
-class _ForumListSkeleton extends StatelessWidget {
-  const _ForumListSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final line = theme.colorScheme.surfaceContainerHighest;
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 300,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 1.45,
-      ),
-      itemCount: 4,
-      itemBuilder: (context, index) => Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            padding: const EdgeInsets.all(13),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: line,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const Spacer(),
-                Container(width: 72, height: 12, color: line),
-              ],
-            ),
-          ),
-    );
-  }
-}
-
-class _ThreadSkeleton extends StatelessWidget {
-  const _ThreadSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final line = theme.colorScheme.surfaceContainerHighest;
-    return Column(
-      children: <Widget>[
-        for (var i = 0; i < 2; i++)
-          Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(width: 120, height: 12, color: line),
-                const SizedBox(height: 12),
-                Container(width: double.infinity, height: 14, color: line),
-                const SizedBox(height: 8),
-                Container(width: 210, height: 10, color: line),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }

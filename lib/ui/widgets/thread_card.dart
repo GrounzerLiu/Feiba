@@ -7,7 +7,9 @@ import '../../core/image_cache.dart';
 
 import '../../data/models/content_node.dart';
 import '../../data/models/forum_page.dart';
+import '../../data/protocol_browse_repository.dart';
 import '../format.dart';
+import 'forum_chip.dart';
 import 'name_avatar.dart';
 
 class ThreadCard extends StatelessWidget {
@@ -18,6 +20,9 @@ class ThreadCard extends StatelessWidget {
     this.authorAvatar,
     this.forumName,
     this.onTap,
+    this.forumRepo,
+    this.showForumChip = false,
+    this.onForumTap,
   });
 
   final ThreadSummary thread;
@@ -25,6 +30,9 @@ class ThreadCard extends StatelessWidget {
   final String? authorAvatar;
   final String? forumName;
   final VoidCallback? onTap;
+  final ProtocolBrowseRepository? forumRepo;
+  final bool showForumChip;
+  final VoidCallback? onForumTap;
 
   @override
   Widget build(BuildContext context) {
@@ -117,35 +125,57 @@ class ThreadCard extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: <Widget>[
-                  Icon(
-                    Icons.forum_outlined,
-                    size: 13,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      forumName == null || forumName!.isEmpty
-                          ? '贴吧'
-                          : forumName!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: showForumChip &&
+                              forumRepo != null &&
+                              forumName != null &&
+                              forumName!.isNotEmpty
+                          ? ForumChip(
+                              name: forumName!,
+                              repo: forumRepo!,
+                              dense: true,
+                              onPressed: onForumTap,
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Icon(
+                                  Icons.forum_outlined,
+                                  size: 13,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    forumName == null || forumName!.isEmpty
+                                        ? '贴吧'
+                                        : forumName!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   _Metric(
                     icon: Icons.visibility_outlined,
                     value: thread.viewNum,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   _Metric(
                     icon: Icons.mode_comment_outlined,
                     value: thread.replyNum,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   _Metric(
                     icon: Icons.favorite_border_rounded,
                     value: thread.agreeNum,

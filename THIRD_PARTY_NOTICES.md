@@ -36,6 +36,12 @@
 - 使用方式：Windows 内置 WebView2 登录页；通过 WebView2 CookieManager 读取 HttpOnly 的 BDUSS/STOKEN。
 - 运行时依赖：Microsoft Edge WebView2 Runtime（Windows 11 自带，Windows 10 可由系统安装）；WebView2 SDK 由 Microsoft 提供。
 
+## flutter_staggered_grid_view
+
+- 项目：https://pub.dev/packages/flutter_staggered_grid_view
+- 许可证：MIT
+- 使用方式：吧外帖子的瀑布流卡片布局。
+
 ## Dart / Flutter 依赖
 
 见 pubspec.yaml，各自遵循其 pub.dev 许可证。

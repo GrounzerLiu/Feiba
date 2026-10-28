@@ -1,13 +1,17 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../data/models/forum_page.dart';
+import '../data/models/feed.dart';
 import '../data/models/user_page.dart';
 import '../data/protocol_browse_repository.dart';
 import 'format.dart';
+import 'forum_page.dart';
 import 'thread_page.dart';
+import 'route_transitions.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/name_avatar.dart';
-import 'widgets/thread_card.dart';
+import 'widgets/thread_grid.dart';
+import 'widgets/loading_indicator.dart';
 
 class UserPage extends StatefulWidget {
   const UserPage({super.key, required this.userId, this.initialName});
@@ -52,14 +56,20 @@ class _UserPageState extends State<UserPage> {
   void _openThread(ThreadSummary thread) {
     final user = _data?.users[thread.authorId];
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ThreadPage(
+      threadPageRoute(
+        ThreadPage(
           tid: thread.tid,
           title: thread.title,
           forumName: thread.forumName,
           authorName: user?.displayName ?? _data?.profile?.displayName,
         ),
       ),
+    );
+  }
+
+  void _openForum(String name) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)),
     );
   }
 
@@ -85,11 +95,9 @@ class _UserPageState extends State<UserPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: <Widget>[
             if (_loading && _data == null)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(40),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: LoadingIndicator(minHeight: 260),
               )
             else if (_error != null && _data == null)
               SliverFillRemaining(
@@ -150,22 +158,19 @@ class _UserPageState extends State<UserPage> {
                   ),
                 )
               else
-                SliverList.builder(
-                  itemCount: _data!.threads.length,
-                  itemBuilder: (context, index) {
-                    final thread = _data!.threads[index];
-                    final user = _data!.users[thread.authorId];
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-                      child: ThreadCard(
-                        thread: thread,
-                        authorName: user?.displayName ?? profile.displayName,
-                        authorAvatar: user?.avatarUrl ?? profile.avatar,
-                        forumName: thread.forumName,
-                        onTap: () => _openThread(thread),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                    child: ThreadGrid(
+                      feed: ThreadFeed(
+                        threads: _data!.threads,
+                        users: _data!.users,
                       ),
-                    );
-                  },
+                      repo: _repo,
+                      onThreadTap: _openThread,
+                      onForumTap: _openForum,
+                    ),
+                  ),
                 ),
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],

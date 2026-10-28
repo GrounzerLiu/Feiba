@@ -57,6 +57,15 @@ void main() {
     expect(library.recentSearches, isEmpty);
   });
 
+  test('forum visits are ordered by click time', () async {
+    final library = LocalLibrary.instance;
+    await library.recordForumVisit('甲吧');
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+    await library.recordForumVisit('乙吧');
+    expect(library.recentForums.take(2), <String>['乙吧', '甲吧']);
+    expect(library.forumVisitedAt('乙吧'), isNotNull);
+  });
+
   test('theme controller persists and reloads the selected mode', () async {
     expect(ThemeController.instance.mode, ThemeMode.system);
     await ThemeController.instance.setMode(ThemeMode.dark);

@@ -13,9 +13,11 @@ import 'format.dart';
 import 'forum_page.dart';
 import 'search_page.dart';
 import 'thread_page.dart';
+import 'route_transitions.dart';
 import 'widgets/forum_avatar.dart';
 import 'widgets/morphing_shape.dart';
-import 'widgets/thread_card.dart';
+import 'widgets/thread_grid.dart';
+import 'widgets/loading_indicator.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key, this.loadFeed = true});
@@ -155,8 +157,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
   void _openThread(ThreadSummary thread) {
     final author = _hotFeed.users[thread.authorId];
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ThreadPage(
+      threadPageRoute(
+        ThreadPage(
           tid: thread.tid,
           title: thread.title,
           forumName: thread.forumName,
@@ -273,7 +275,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ),
           ),
           if (_loading && _topics.isEmpty)
-            const _ListSkeleton()
+            const LoadingIndicator()
           else if (_topics.isEmpty)
             const _EmptyCard(text: '话题榜暂时没有数据。')
           else
@@ -313,7 +315,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ),
           ),
           if (_loading && _hotForums.isEmpty)
-            const _ListSkeleton()
+            const LoadingIndicator()
           else if (_error != null && _hotForums.isEmpty)
             _ErrorCard(message: _error!, onRetry: _load)
           else if (_hotForums.isEmpty)
@@ -367,10 +369,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
         ),
         const SizedBox(height: 16),
         if (_categoryLoading)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          )
+          const LoadingIndicator()
         else if (_recommended.isEmpty)
           const _EmptyCard(text: '这个分类暂时没有推荐吧。')
         else
@@ -415,21 +414,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ),
           ),
           if (_loading && _hotFeed.threads.isEmpty)
-            const _ThreadSkeleton()
+            const LoadingIndicator(minHeight: 220)
           else if (_hotFeed.threads.isEmpty)
             const _EmptyCard(text: '热帖暂时没有数据。')
           else
-            for (final thread in _hotFeed.threads)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ThreadCard(
-                  thread: thread,
-                  authorName: _hotFeed.users[thread.authorId]?.displayName,
-                  authorAvatar: _hotFeed.users[thread.authorId]?.avatarUrl,
-                  forumName: thread.forumName,
-                  onTap: () => _openThread(thread),
-                ),
-              ),
+            ThreadGrid(
+              feed: _hotFeed,
+              repo: _repo,
+              onThreadTap: _openThread,
+              onForumTap: _openForum,
+            ),
         ],
       ),
     );
@@ -764,76 +758,6 @@ class _ErrorCard extends StatelessWidget {
           TextButton(onPressed: onRetry, child: const Text('重试')),
         ],
       ),
-    );
-  }
-}
-
-class _ListSkeleton extends StatelessWidget {
-  const _ListSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final line = theme.colorScheme.surfaceContainerHighest;
-    return Column(
-      children: <Widget>[
-        for (var i = 0; i < 4; i++)
-          Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: <Widget>[
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: line,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(child: Container(height: 12, color: line)),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _ThreadSkeleton extends StatelessWidget {
-  const _ThreadSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final line = theme.colorScheme.surfaceContainerHighest;
-    return Column(
-      children: <Widget>[
-        for (var i = 0; i < 3; i++)
-          Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(width: 120, height: 12, color: line),
-                const SizedBox(height: 12),
-                Container(width: double.infinity, height: 14, color: line),
-                const SizedBox(height: 8),
-                Container(width: 210, height: 10, color: line),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }

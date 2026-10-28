@@ -4,6 +4,7 @@ import '../core/local_library.dart';
 import 'format.dart';
 import 'forum_page.dart';
 import 'thread_page.dart';
+import 'route_transitions.dart';
 import 'widgets/empty_state.dart';
 
 /// Local-only history and favorites, available without an account.
@@ -65,8 +66,8 @@ class LibraryPage extends StatelessWidget {
 
   void _openThread(BuildContext context, LocalThread item) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ThreadPage(
+      threadPageRoute(
+        ThreadPage(
           tid: item.tid,
           title: item.title,
           forumName: item.forumName,

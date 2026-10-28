@@ -74,14 +74,17 @@ class LocalLibrary extends ChangeNotifier {
   static const String _favoritesKey = 'library_favorites_v1';
   static const String _followedForumsKey = 'library_followed_forums_v1';
   static const String _searchesKey = 'library_recent_searches_v1';
+  static const String _forumVisitsKey = 'library_forum_visits_v1';
   static const int _historyLimit = 50;
   static const int _favoriteLimit = 100;
+  static const int _recentForumLimit = 40;
 
   SharedPreferences? _prefs;
   final List<LocalThread> _history = <LocalThread>[];
   final List<LocalThread> _favorites = <LocalThread>[];
   final Set<String> _followedForums = <String>{};
   final List<String> _recentSearches = <String>[];
+  final Map<String, int> _forumVisits = <String, int>{};
   bool _loaded = false;
 
   List<LocalThread> get history => List<LocalThread>.unmodifiable(_history);
@@ -92,15 +95,20 @@ class LocalLibrary extends ChangeNotifier {
   List<String> get followedForums => List<String>.unmodifiable(_followedForums);
   List<String> get recentSearches => List<String>.unmodifiable(_recentSearches);
 
+  int? forumVisitedAt(String name) => _forumVisits[name.trim()];
+
   List<String> get recentForums {
-    final seen = <String>{};
-    final result = <String>[];
+    final visits = <String, int>{..._forumVisits};
     for (final item in _history) {
       if (item.forumName.isEmpty) continue;
-      if (seen.add(item.forumName)) result.add(item.forumName);
-      if (result.length >= 5) break;
+      visits.putIfAbsent(item.forumName, () => item.visitedAt);
     }
-    return result;
+    final entries = visits.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return entries
+        .take(20)
+        .map((entry) => entry.key)
+        .toList(growable: false);
   }
 
   Future<void> load() async {
@@ -118,6 +126,9 @@ class LocalLibrary extends ChangeNotifier {
       _recentSearches
         ..clear()
         ..addAll(_decodeStrings(_prefs!.getString(_searchesKey)));
+      _forumVisits
+        ..clear()
+        ..addAll(_decodeIntMap(_prefs!.getString(_forumVisitsKey)));
     } catch (_) {
       // In-memory mode: browsing still works in this run.
     }
@@ -128,6 +139,21 @@ class LocalLibrary extends ChangeNotifier {
   bool isFavorite(int tid) => _favorites.any((item) => item.tid == tid);
 
   bool isForumFollowed(String name) => _followedForums.contains(name);
+
+  Future<void> recordForumVisit(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    _forumVisits[trimmed] = DateTime.now().millisecondsSinceEpoch;
+    if (_forumVisits.length > _recentForumLimit) {
+      final oldest = _forumVisits.entries.toList()
+        ..sort((a, b) => a.value.compareTo(b.value));
+      for (final entry in oldest.take(_forumVisits.length - _recentForumLimit)) {
+        _forumVisits.remove(entry.key);
+      }
+    }
+    notifyListeners();
+    await _persistIntMap(_forumVisitsKey, _forumVisits);
+  }
 
   Future<void> recordSearch(String keyword) async {
     final value = keyword.trim();
@@ -145,6 +171,7 @@ class LocalLibrary extends ChangeNotifier {
     _recentSearches.clear();
     notifyListeners();
     await _persistStrings(_searchesKey, <String>{});
+    await _persistIntMap(_forumVisitsKey, _forumVisits);
   }
 
   Future<bool> toggleForumFollow(String name) async {
@@ -250,6 +277,7 @@ class LocalLibrary extends ChangeNotifier {
     _favorites.clear();
     _followedForums.clear();
     _recentSearches.clear();
+    _forumVisits.clear();
     notifyListeners();
     await _persist(_historyKey, _history);
     await _persist(_favoritesKey, _favorites);
@@ -283,6 +311,35 @@ class LocalLibrary extends ChangeNotifier {
           .toList();
     } catch (_) {
       return const <String>[];
+    }
+  }
+
+  Map<String, int> _decodeIntMap(String? raw) {
+    if (raw == null || raw.isEmpty) return const <String, int>{};
+    try {
+      final value = jsonDecode(raw);
+      if (value is! Map) return const <String, int>{};
+      final result = <String, int>{};
+      for (final entry in value.entries) {
+        final key = entry.key.toString();
+        final number = entry.value;
+        if (key.isNotEmpty && number is num) {
+          result[key] = number.toInt();
+        }
+      }
+      return result;
+    } catch (_) {
+      return const <String, int>{};
+    }
+  }
+
+  Future<void> _persistIntMap(String key, Map<String, int> value) async {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    try {
+      await prefs.setString(key, jsonEncode(value));
+    } catch (_) {
+      // Keep the in-memory copy; a restricted AppData directory is not fatal.
     }
   }
 

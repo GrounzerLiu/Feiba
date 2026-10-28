@@ -7,7 +7,10 @@ import '../protocol/models/search.dart';
 import 'format.dart';
 import 'forum_page.dart';
 import 'thread_page.dart';
+import 'route_transitions.dart';
 import 'widgets/dismissible_sheet.dart';
+import 'widgets/forum_chip.dart';
+import 'widgets/loading_indicator.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/name_avatar.dart';
 
@@ -83,8 +86,8 @@ class _SearchPageState extends State<SearchPage> {
 
   void _openThread(SearchGlobal item) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ThreadPage(
+      threadPageRoute(
+        ThreadPage(
           tid: item.tid,
           title: item.title,
           forumName: item.forumName,
@@ -288,7 +291,7 @@ class _SearchPageState extends State<SearchPage> {
           else if (_loading)
             const SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(child: CircularProgressIndicator()),
+              child: LoadingIndicator(),
             )
           else if (_error != null && empty)
             SliverFillRemaining(
@@ -385,18 +388,24 @@ class _SearchPageState extends State<SearchPage> {
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                sliver: SliverList.separated(
-                  itemCount: _results.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
+                sliver: SliverGrid(
+                  gridDelegate:
+                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 480,
+                        mainAxisExtent: 172,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                      ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
                     final item = _results[index];
                     return _SearchResultCard(
                       key: ValueKey<int>(item.tid),
                       item: item,
                       repo: _repo,
                       onTap: () => _openThread(item),
+                      onForumTap: () => _openForum(item.forumName),
                     );
-                  },
+                  }, childCount: _results.length),
                 ),
               ),
             ],
@@ -504,11 +513,13 @@ class _SearchResultCard extends StatefulWidget {
     required this.item,
     required this.repo,
     required this.onTap,
+    required this.onForumTap,
   });
 
   final SearchGlobal item;
   final ProtocolBrowseRepository repo;
   final VoidCallback onTap;
+  final VoidCallback onForumTap;
 
   @override
   State<_SearchResultCard> createState() => _SearchResultCardState();
@@ -570,19 +581,35 @@ class _SearchResultCardState extends State<_SearchResultCard> {
                       ),
                     ],
                     const SizedBox(height: 7),
-                    Text(
-                      <String>[
-                        if (item.forumName.isNotEmpty) item.forumName,
-                        if (item.authorShowName.isNotEmpty) item.authorShowName,
-                        if (item.postNum > 0)
-                          '${compactCount(item.postNum)} 回复',
-                        relativeTime(item.createTime),
-                      ].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    Row(
+                      children: <Widget>[
+                        if (item.forumName.isNotEmpty)
+                          Flexible(
+                            child: ForumChip(
+                              name: item.forumName,
+                              repo: widget.repo,
+                              dense: true,
+                              onPressed: widget.onForumTap,
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            <String>[
+                              if (item.authorShowName.isNotEmpty)
+                                item.authorShowName,
+                              if (item.postNum > 0)
+                                '${compactCount(item.postNum)} 回复',
+                              relativeTime(item.createTime),
+                            ].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

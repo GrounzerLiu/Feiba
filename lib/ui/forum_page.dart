@@ -8,6 +8,8 @@ import '../data/protocol_browse_repository.dart';
 import 'auth_gate.dart';
 import 'format.dart';
 import 'thread_page.dart';
+import 'route_transitions.dart';
+import 'widgets/loading_indicator.dart';
 import 'widgets/name_avatar.dart';
 import 'widgets/thread_card.dart';
 
@@ -37,6 +39,7 @@ class _ForumPageState extends State<ForumPage> {
   @override
   void initState() {
     super.initState();
+    LocalLibrary.instance.recordForumVisit(widget.forumName);
     _scroll.addListener(_onScroll);
     _load(reset: true);
   }
@@ -228,7 +231,7 @@ class _ForumPageState extends State<ForumPage> {
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: _loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const LoadingIndicator(minHeight: 280)
                     : _error != null
                     ? _ForumError(
                         message: _error!,
@@ -262,8 +265,8 @@ class _ForumPageState extends State<ForumPage> {
                       authorAvatar: user?.avatarUrl as String?,
                       forumName: title,
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => ThreadPage(
+                        threadPageRoute(
+                          ThreadPage(
                             tid: thread.tid,
                             title: thread.title,
                             forumName: title,

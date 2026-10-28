@@ -3,11 +3,26 @@ import 'package:feiba/data/models/forum_page.dart';
 import 'package:feiba/ui/theme.dart';
 import 'package:feiba/ui/widgets/morphing_shape.dart';
 import 'package:feiba/ui/widgets/name_avatar.dart';
+import 'package:feiba/ui/widgets/forum_follow_card.dart';
 import 'package:feiba/ui/widgets/thread_card.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('forum level colors cover the level ranges', () {
+    expect(
+      ForumFollowCard.levelColor(1),
+      isNot(ForumFollowCard.levelColor(5)),
+    );
+    expect(
+      ForumFollowCard.levelColor(8),
+      isNot(ForumFollowCard.levelColor(11)),
+    );
+    expect(
+      ForumFollowCard.levelColor(14),
+      isNot(ForumFollowCard.levelColor(17)),
+    );
+  });
   testWidgets('thread card renders metadata in dark theme', (
     WidgetTester tester,
   ) async {

@@ -18,7 +18,7 @@ void main() {
     expect(find.text('关注'), findsWidgets);
     expect(find.text('动态'), findsOneWidget);
     expect(find.text('吧友'), findsOneWidget);
-    expect(find.text('看过'), findsOneWidget);
+    expect(find.textContaining('关注的吧'), findsOneWidget);
     expect(find.text('广场'), findsOneWidget);
     expect(find.text('消息'), findsOneWidget);
     expect(find.text('我的'), findsOneWidget);

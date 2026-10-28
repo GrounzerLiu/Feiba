@@ -142,7 +142,7 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 ## 6. 状态与错误
 
-- 加载：居中进度或卡片骨架；
+- 加载：使用官方 Material 3 CircularProgressIndicator，居中显示；不使用骨架屏。
 - 空：图标 + 标题 + 说明 + 可选动作；
 - 失败：说明 + 重试按钮，不吞异常；
 - 下拉刷新：首页、吧页、帖子页；
@@ -242,3 +242,9 @@ ExpressiveSheet 等官方尚未提供，项目没有用第三方实现冒充。
 - 页面主体最大宽度 1200dp，宽屏下居中；吧列表、推荐吧和搜索吧结果使用最大列宽 300dp 的自适应网格。
 
 断点和最大宽度集中在 lib/ui/main_shell.dart；NavigationRail 与 NavigationBar 共享同一组目的地和选中状态。
+## 关注吧与帖子卡片
+
+- 首页默认打开“吧”页；看过的吧以横向 ForumChip 显示在关注的吧上方，按最近点击时间倒序，不单独占用一个 tab。
+- ForumChip 使用 Material 3 ActionChip，带头像和名字；点击时写入 LocalLibrary 的访问时间。
+- 吧内帖子保持列表；吧外的帖子使用 ThreadGrid，按可用宽度 1–4 列排列，并在卡片底部显示可点击的吧 chip。
+- 帖子详情使用 Fade + Slide 的 PageRouteBuilder 转场。
