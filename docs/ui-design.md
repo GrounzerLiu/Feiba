@@ -2,7 +2,7 @@
 
 > 目标：把 Feiba 从“能用”提升为“愿意每天打开”的贴吧客户端界面。
 > 参考：TiebaLite 4.x 的信息层级、底部导航、信息流卡片和帖子详情结构。
-> 实现：Flutter / Material 3。浏览链路使用 `lib/data` 旧 JSON；账号动作通过 `lib/core/tieba_api.dart` 调协议层。
+> 实现：Flutter / Material 3。首页/吧页/帖子页使用 `lib/data/protocol_browse_repository.dart` 的协议层 `getThreads` / `getPosts` / `getComments`；账号动作通过 `lib/core/tieba_api.dart`。
 
 ## 1. 参考与素材边界
 
@@ -78,7 +78,7 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 - AppBar 显示标题，分享入口；
 - 楼层卡片：头像、用户名、时间、楼主/楼层标记；
 - 富文本 `ContentView`：文本、表情、链接、图片网格；
-- 楼中楼先在楼层内展示预览，点击后在底部 BottomSheet 中分页展开；
+- 楼中楼先在楼层内展示协议层返回的预览，点击后在底部 BottomSheet 中分页展开；
 - 底部悬浮回复栏 + 真实点赞接口（`setAgree`）；游客点击时弹出登录引导；
 - AppBar 支持本地收藏与复制帖子链接；
 - 楼中楼展开上限从 10 页放宽到 100 页。
@@ -116,6 +116,7 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 | NameAvatar | lib/ui/widgets/name_avatar.dart | 网络头像 / 首字母色块 |
 | SectionHeader | lib/ui/widgets/section_header.dart | 分组标题与动作 |
 | EmptyState | lib/ui/widgets/empty_state.dart | 统一空态 |
+| ProtocolBrowseRepository | lib/data/protocol_browse_repository.dart | 协议层信息流/帖子/楼中楼适配 |
 | LibraryPage | lib/ui/library_page.dart | 本地历史/收藏/关注 |
 | LocalLibrary | lib/core/local_library.dart | 游客本地历史、收藏、关注与搜索 |
 | ThemeController | lib/core/theme_controller.dart | 外观模式持久化 |
@@ -133,8 +134,11 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 ## 7. 数据边界
 
-浏览链路继续使用 `lib/data/tieba_repository.dart` 的旧 JSON；账号动作通过
-`lib/core/tieba_api.dart` 调协议层，避免为了一个按钮整体切换数据源。
+首页信息流、吧页帖子列表和帖子页楼层/楼中楼已切换到
+`lib/data/protocol_browse_repository.dart`，底层是协议层的
+`fetchThreads` / `fetchPosts` / `fetchComments`。
+
+账号动作通过 `lib/core/tieba_api.dart` 调协议层；搜索和登录校验仍使用旧 JSON 端点。
 
 已接入协议层：
 
@@ -161,5 +165,6 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 - `test/local_library_test.dart`：游客历史/收藏/关注、最近搜索、主题持久化；
 - `test/guest_ui_test.dart`：游客个人页、本地空间 tabs；
 - `test/tieba_api_test.dart`：未登录时协议桥的拒绝与错误文案；
+- 协议层信息流通过 `tool/protocol_smoke.dart` 与真机页面联调；
 - 首页通过 `HomePage(loadFeed: false)` 支持无网络组件测试；
 - 组件测试不依赖真实贴吧接口。

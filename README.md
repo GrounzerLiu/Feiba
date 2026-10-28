@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | P0 | 工程架构、Material 3 主题、路由 | 已完成 |
 | P1 | 协议基座（aiotieba 移植）：三种传输、protobuf、账号 crypto、读写接口 | 已完成 |
-| P2 | 只读主链路：吧页帖子列表 → 帖子详情 → 楼中楼 | 已完成（旧 JSON 链路） |
+| P2 | 只读主链路：吧页帖子列表 → 帖子详情 → 楼中楼 | 已完成（协议层 getThreads/getPosts） |
 | P3 | 媒体：图片、WebView、视频 | 部分完成（图片查看/保存） |
 | P4 | 登录与多账号 | 部分完成（BDUSS 登录；资料/关注/点赞/签到走协议层） |
 | P5 | 写操作：发帖、回复、点赞、收藏 | 待开始 |
@@ -38,11 +38,11 @@
 - 消息：登录后展示真实回复/@；游客展示用途说明与登录引导
 - 我的：账号资料/统计、本地历史/收藏/关注、外观/缓存/关于/开源许可
 - 吧页：渐变吧头、排序 chips、缩略图信息流
-- 帖子页：楼层卡片、富文本/图片网格、楼中楼 BottomSheet、收藏/复制链接、点赞接口
+- 帖子页：协议层楼层卡片、富文本/图片网格、楼中楼 BottomSheet、收藏/复制链接、点赞接口
 
-设计说明与许可证边界见 [docs/ui-design.md](docs/ui-design.md)。浏览链路仍使用旧的
-`lib/data` JSON；登录后的消息、资料、关注、点赞、签到已通过 `lib/core/tieba_api.dart`
-调用协议层，游客历史/收藏/关注保存在本机。
+设计说明与许可证边界见 [docs/ui-design.md](docs/ui-design.md)。首页/吧页/帖子页已使用
+`lib/data/protocol_browse_repository.dart` 的协议层信息流；搜索和登录校验仍走旧 JSON。
+登录后的消息、资料、关注、点赞、签到通过 `lib/core/tieba_api.dart` 调用协议层。
 
 > 说明：TiebaLite 采用 GPL-3.0，而 Feiba 采用 MIT。本版只参考其布局/交互，
 > 未复制其代码、图片、字体或 drawable；如要直接使用其素材，需要先调整项目许可证或取得授权。
@@ -56,7 +56,7 @@
 - 已覆盖 aiotieba 4.8.2 的全部 API 模块：吧/帖/楼中楼、搜索、用户/主页/历史、通知、吧务、恢复/申诉、排行、图片、全部读写操作，以及 BLCP/WebSocket 聊天/IM
 - `proto/` 为移植的 protobuf schema，生成代码在 `lib/protocol/generated/`
 
-> 浏览链路仍使用旧的 `lib/core/tieba_client.dart` JSON 实现；账号动作通过 `lib/core/tieba_api.dart` 使用协议层。覆盖清单见 [docs/port-checklist.md](docs/port-checklist.md)，设计与验证边界见 [docs/aiotieba-port.md](docs/aiotieba-port.md)。
+> 浏览链路已使用 `lib/data/protocol_browse_repository.dart` 的协议层 `getThreads/getPosts`；搜索和登录校验仍使用旧 JSON。账号动作通过 `lib/core/tieba_api.dart`。覆盖清单见 [docs/port-checklist.md](docs/port-checklist.md)，设计与验证边界见 [docs/aiotieba-port.md](docs/aiotieba-port.md)。
 
 联调：
 

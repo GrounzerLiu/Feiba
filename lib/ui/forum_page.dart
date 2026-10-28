@@ -4,7 +4,7 @@ import '../core/local_library.dart';
 import '../core/session.dart';
 import '../core/tieba_api.dart';
 import '../data/models/forum_page.dart';
-import '../data/tieba_repository.dart';
+import '../data/protocol_browse_repository.dart';
 import 'auth_gate.dart';
 import 'format.dart';
 import 'thread_page.dart';
@@ -21,7 +21,7 @@ class ForumPage extends StatefulWidget {
 }
 
 class _ForumPageState extends State<ForumPage> {
-  final TiebaRepository _repo = TiebaRepository();
+  final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
   final ScrollController _scroll = ScrollController();
 
   final List<ThreadSummary> _threads = <ThreadSummary>[];

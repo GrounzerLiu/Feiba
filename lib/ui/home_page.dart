@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/local_library.dart';
 import '../core/session.dart';
 import '../data/models/forum_page.dart';
-import '../data/tieba_repository.dart';
+import '../data/protocol_browse_repository.dart';
 import 'forum_page.dart';
 import 'login_page.dart';
 import 'search_page.dart';
@@ -22,7 +22,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final TiebaRepository _repo = TiebaRepository();
+  final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
 
   List<ThreadSummary> _threads = const <ThreadSummary>[];
   Map<int, dynamic> _users = const <int, dynamic>{};

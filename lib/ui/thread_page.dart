@@ -6,7 +6,7 @@ import '../core/session.dart';
 import '../core/tieba_api.dart';
 import '../data/models/thread_page.dart';
 import '../data/models/tieba_user.dart';
-import '../data/tieba_repository.dart';
+import '../data/protocol_browse_repository.dart';
 import 'auth_gate.dart';
 import 'format.dart';
 import 'widgets/content_view.dart';
@@ -31,7 +31,7 @@ class ThreadPage extends StatefulWidget {
 }
 
 class _ThreadPageState extends State<ThreadPage> {
-  final TiebaRepository _repo = TiebaRepository();
+  final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
   final ScrollController _scroll = ScrollController();
 
   final List<PostItem> _posts = <PostItem>[];
@@ -589,7 +589,7 @@ class _SubPostsSheet extends StatefulWidget {
 }
 
 class _SubPostsSheetState extends State<_SubPostsSheet> {
-  final TiebaRepository _repo = TiebaRepository();
+  final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
   final List<SubPost> _items = <SubPost>[];
   int _pn = 1;
   bool _loading = false;
