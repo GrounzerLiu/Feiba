@@ -107,8 +107,10 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 ### 登录页（LoginPage）
 
 - 蓝色渐变品牌头 + 登录说明；
+- **Android 网页登录**：原生 `LoginWebViewActivity` 打开百度 passport，登录重定向到贴吧后从 Android CookieManager 读取 HttpOnly 的 BDUSS/STOKEN；回到 Flutter 后由 `fetchLogin` 校验；
+- **Windows**：没有内置 WebView cookie 桥，保留手动粘贴 BDUSS；
 - BDUSS 默认隐藏，可切换显示；STOKEN 可选；
-- 登录按钮、状态消息、退出登录；BDUSS 由协议层 `fetchLogin` 校验；游客可直接返回继续浏览；
+- 登录按钮、状态消息、退出登录；退出时同时清理 WebView Cookie；游客可直接返回继续浏览；
 - “如何获取 BDUSS”折叠说明；
 - 凭据仅本机保存的提示。
 
@@ -171,6 +173,7 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 已接入协议层：
 
+- Android 网页登录：`LoginWebViewActivity` + `feiba/login` MethodChannel + `CookieManager.getCookie`；
 - 登录后消息：`fetchReplies` / `fetchAts`；
 - 账号资料与关注/粉丝/发帖统计：`fetchLogin` + `fetchUserInfo`；
 - 吧关注/取消关注：`followForum` / `unfollowForum`；

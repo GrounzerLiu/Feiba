@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../core/session.dart';
 import '../core/tieba_api.dart';
 import '../protocol/core/exceptions.dart';
+import 'web_login_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -77,7 +80,20 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _webLogin() async {
+    final result = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute<bool>(builder: (_) => const WebLoginPage()));
+    if (result != true || !mounted) return;
+    Navigator.of(context).pop(true);
+  }
+
   Future<void> _logout() async {
+    try {
+      await clearWebLoginCookies();
+    } catch (_) {
+      // Cookie cleanup is best effort.
+    }
     TiebaApi.instance.reset();
     await Session.instance.clear();
     if (!mounted) return;
@@ -153,6 +169,29 @@ class _LoginPageState extends State<LoginPage> {
               ],
             ),
           ),
+          const SizedBox(height: 14),
+          if (Platform.isAndroid) ...<Widget>[
+            FilledButton.icon(
+              onPressed: _busy ? null : _webLogin,
+              icon: const Icon(Icons.open_in_browser_rounded),
+              label: const Text('通过网页登录'),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '在贴吧网页完成登录，自动获取 BDUSS/STOKEN',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ] else
+            Text(
+              '桌面端请手动粘贴 BDUSS；Android 支持内置网页登录',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           if (loggedIn) ...<Widget>[
             const SizedBox(height: 14),
             Container(
@@ -180,7 +219,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ],
           const SizedBox(height: 18),
-          Text('登录凭据', style: theme.textTheme.titleMedium),
+          Text('或手动粘贴 Cookie', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           TextField(
             controller: _bduss,
