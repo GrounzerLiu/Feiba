@@ -14,6 +14,7 @@ import '../protocol/models/thread.dart' as protocol_thread;
 import '../protocol/models/user.dart' as protocol_user;
 import 'models/content_node.dart';
 import 'models/forum_page.dart';
+import 'models/forum_search.dart';
 import 'models/thread_page.dart';
 import 'models/tieba_user.dart';
 
@@ -26,6 +27,9 @@ class ProtocolBrowseRepository {
   ProtocolBrowseRepository();
 
   TiebaHttpCore? _http;
+
+  static List<dynamic> _list(dynamic value) =>
+      value is List ? value : const <dynamic>[];
 
   TiebaHttpCore get _core => _http ??= TiebaHttpCore(account: TiebaAccount());
 
@@ -71,6 +75,24 @@ class ProtocolBrowseRepository {
       totalPage: page.page.totalPage,
       hasMore: page.hasMore,
     );
+  }
+
+  Future<List<ForumSearchResult>> searchForums(String keyword) async {
+    final json = await _core.webGetJson(
+      '/mo/q/search/forum',
+      query: <String, String>{'word': keyword, 'pn': '1', 'rn': '20'},
+    );
+    final data = json['data'];
+    if (data is! Map) return const <ForumSearchResult>[];
+    final raw = <dynamic>[
+      ..._list(data['exactMatch']),
+      ..._list(data['fuzzyMatch']),
+    ];
+    return raw
+        .whereType<Map>()
+        .map((item) => ForumSearchResult.fromJson(item.cast<String, dynamic>()))
+        .where((item) => item.name.isNotEmpty)
+        .toList(growable: false);
   }
 
   Future<List<SearchGlobal>> searchGlobal(String query, {int pn = 1}) async {

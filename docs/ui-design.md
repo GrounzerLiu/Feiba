@@ -138,7 +138,7 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 `lib/data/protocol_browse_repository.dart`，底层是协议层的
 `fetchThreads` / `fetchPosts` / `fetchComments`。
 
-搜索使用 `fetchSearchGlobal`，登录校验使用 `fetchLogin`；账号动作通过
+搜索同时使用协议吧搜索和 `fetchSearchGlobal`，登录校验使用 `fetchLogin`；账号动作通过
 `lib/core/tieba_api.dart` 调协议层。旧 JSON 端点只保留在工具和兼容代码中。
 
 已接入协议层：
@@ -166,6 +166,7 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 - `test/local_library_test.dart`：游客历史/收藏/关注、最近搜索、主题持久化；
 - `test/guest_ui_test.dart`：游客个人页、本地空间 tabs；
 - `test/tieba_api_test.dart`：未登录/BDUSS 格式错误时协议桥的拒绝与错误文案；
+- `test/login_page_test.dart`：登录页走协议校验并显示错误；
 - 协议层信息流通过 `tool/protocol_smoke.dart` 与真机页面联调；
 - 首页通过 `HomePage(loadFeed: false)` 支持无网络组件测试；
 - 组件测试不依赖真实贴吧接口。

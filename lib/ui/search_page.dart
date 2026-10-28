@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/local_library.dart';
+import '../data/models/forum_search.dart';
 import '../data/protocol_browse_repository.dart';
 import '../protocol/models/search.dart';
 import 'format.dart';
@@ -24,6 +25,7 @@ class _SearchPageState extends State<SearchPage> {
     text: widget.initialKeyword,
   );
 
+  List<ForumSearchResult> _forums = const <ForumSearchResult>[];
   List<SearchGlobal> _results = const <SearchGlobal>[];
   bool _loading = false;
   String? _error;
@@ -60,16 +62,31 @@ class _SearchPageState extends State<SearchPage> {
       _error = null;
       _searched = true;
     });
+
+    List<ForumSearchResult> forums = const <ForumSearchResult>[];
+    List<SearchGlobal> discussions = const <SearchGlobal>[];
+    Object? failure;
+    final forumFuture = _repo.searchForums(keyword);
+    final discussionFuture = _repo.searchGlobal(keyword);
     try {
-      final results = await _repo.searchGlobal(keyword);
-      if (!mounted) return;
-      setState(() => _results = results);
+      forums = await forumFuture;
     } catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      failure = error;
     }
+    try {
+      discussions = await discussionFuture;
+    } catch (error) {
+      failure ??= error;
+    }
+    if (!mounted) return;
+    setState(() {
+      _forums = forums;
+      _results = discussions;
+      _loading = false;
+      _error = forums.isEmpty && discussions.isEmpty && failure != null
+          ? failure.toString()
+          : null;
+    });
   }
 
   void _openThread(SearchGlobal item) {
@@ -85,11 +102,58 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  void _openForum([String? name]) {
-    final keyword = (name ?? _controller.text).trim();
-    if (keyword.isEmpty) return;
+  void _openForum(String name) {
+    if (name.trim().isEmpty) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: keyword)),
+      MaterialPageRoute<void>(
+        builder: (_) => ForumPage(forumName: name.trim()),
+      ),
+    );
+  }
+
+  void _showAllForums() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        return FractionallySizedBox(
+          heightFactor: 0.78,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                child: Text(
+                  '相关贴吧 ${_forums.length}',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                  itemCount: _forums.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final forum = _forums[index];
+                    return _ForumSearchTile(
+                      forum: forum,
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        _openForum(forum.name);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -97,6 +161,7 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final keyword = _controller.text.trim();
+    final empty = _forums.isEmpty && _results.isEmpty;
     return Scaffold(
       body: CustomScrollView(
         slivers: <Widget>[
@@ -118,7 +183,7 @@ class _SearchPageState extends State<SearchPage> {
                         textInputAction: TextInputAction.search,
                         onSubmitted: (_) => _search(),
                         decoration: InputDecoration(
-                          hintText: '搜索全站帖子，或直接输入吧名',
+                          hintText: '搜索吧和全站讨论',
                           prefixIcon: const Icon(Icons.search_rounded),
                           suffixIcon: _controller.text.isEmpty
                               ? null
@@ -209,7 +274,7 @@ class _SearchPageState extends State<SearchPage> {
                     const EmptyState(
                       icon: Icons.travel_explore_rounded,
                       title: '从一个关键词开始',
-                      description: '搜索全站讨论，或直接输入完整的吧名进入贴吧。',
+                      description: '同时搜索相关贴吧和全站讨论。',
                     ),
                   ],
                 ),
@@ -220,7 +285,7 @@ class _SearchPageState extends State<SearchPage> {
               hasScrollBody: false,
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (_error != null)
+          else if (_error != null && empty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: EmptyState(
@@ -233,13 +298,13 @@ class _SearchPageState extends State<SearchPage> {
                 ),
               ),
             )
-          else if (_results.isEmpty)
+          else if (empty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: EmptyState(
                 icon: Icons.search_off_rounded,
-                title: '没有找到相关讨论',
-                description: '换个关键词试试，或直接进入这个吧。',
+                title: '没有找到相关内容',
+                description: '换个关键词试试，或者直接进入这个吧。',
                 action: OutlinedButton(
                   onPressed: keyword.isEmpty ? null : () => _openForum(keyword),
                   child: Text(keyword.isEmpty ? '进入吧' : '进入「$keyword」吧'),
@@ -247,45 +312,177 @@ class _SearchPageState extends State<SearchPage> {
               ),
             )
           else ...<Widget>[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-                child: Row(
+            if (_forums.isNotEmpty) ...<Widget>[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+                  child: Row(
+                    children: <Widget>[
+                      Text('相关贴吧', style: theme.textTheme.titleMedium),
+                      const SizedBox(width: 7),
+                      Text(
+                        '${_forums.length}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
+                sliver: SliverGrid.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 2.55,
+                  children: <Widget>[
+                    for (final forum in _forums.take(6))
+                      _ForumResultCard(
+                        forum: forum,
+                        onTap: () => _openForum(forum.name),
+                      ),
+                  ],
+                ),
+              ),
+              if (_forums.length > 6)
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: TextButton(
+                      onPressed: _showAllForums,
+                      child: Text('查看全部 ${_forums.length} 个吧'),
+                    ),
+                  ),
+                ),
+            ],
+            if (_results.isNotEmpty) ...<Widget>[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                  child: Row(
+                    children: <Widget>[
+                      Text('相关讨论', style: theme.textTheme.titleMedium),
+                      const SizedBox(width: 7),
+                      Text(
+                        '${_results.length}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                sliver: SliverList.separated(
+                  itemCount: _results.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = _results[index];
+                    return _SearchResultCard(
+                      item: item,
+                      onTap: () => _openThread(item),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ForumResultCard extends StatelessWidget {
+  const _ForumResultCard({required this.forum, required this.onTap});
+
+  final ForumSearchResult forum;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          child: Row(
+            children: <Widget>[
+              NameAvatar(
+                name: forum.displayName,
+                imageUrl: forum.avatar,
+                size: 34,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      '找到 ${_results.length} 条讨论',
+                      forum.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${compactCount(forum.memberNum)} 关注',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: keyword.isEmpty
-                          ? null
-                          : () => _openForum(keyword),
-                      icon: const Icon(Icons.forum_outlined, size: 16),
-                      label: Text('进入「$keyword」吧'),
-                    ),
                   ],
                 ),
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-              sliver: SliverList.separated(
-                itemCount: _results.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final item = _results[index];
-                  return _SearchResultCard(
-                    item: item,
-                    onTap: () => _openThread(item),
-                  );
-                },
-              ),
-            ),
-          ],
-        ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ForumSearchTile extends StatelessWidget {
+  const _ForumSearchTile({required this.forum, required this.onTap});
+
+  final ForumSearchResult forum;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        onTap: onTap,
+        leading: NameAvatar(
+          name: forum.displayName,
+          imageUrl: forum.avatar,
+          size: 40,
+        ),
+        title: Text(
+          forum.displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          '${compactCount(forum.memberNum)} 关注 · ${compactCount(forum.postNum)} 帖子',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
       ),
     );
   }
