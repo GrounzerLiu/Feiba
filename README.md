@@ -108,14 +108,15 @@ flutter build windows --debug       # 构建验证
 
 ## Windows 安装器
 
+使用标准 NSIS 安装器，默认安装到 `C:\Program Files\Feiba`，需要管理员权限：
+
 ```bash
 flutter build windows --release
-"C:\Program Files\Inno Setup 7\ISCC.exe" tool/feiba_setup.iss
+makensis tool/feiba_setup.nsi
 ```
 
-输出：`build/installer/Feiba-Setup-0.1.0.exe`。安装器使用当前用户目录
-`%LOCALAPPDATA%\Programs\Feiba`，不需要管理员权限。安装包没有商业代码签名证书，
-Windows SmartScreen 会提示“未知发布者”；这是自建安装器的正常提示，选择“运行”即可。
+输出：`build/installer/Feiba-Setup-0.1.0.exe`。安装器创建开始菜单和桌面快捷方式，并注册卸载程序。
+安装包没有商业代码签名证书，Windows SmartScreen 会提示“未知发布者”；选择“运行”即可。
 
 ## 许可证
 
