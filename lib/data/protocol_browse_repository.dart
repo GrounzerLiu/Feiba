@@ -2,12 +2,14 @@ import '../protocol/api/get_comments.dart';
 import '../protocol/api/get_forum.dart';
 import '../protocol/api/get_posts.dart';
 import '../protocol/api/get_threads.dart';
+import '../protocol/api/search_global.dart';
 import '../protocol/core/account.dart';
 import '../protocol/core/enums.dart';
 import '../protocol/core/http_core.dart';
 import '../protocol/models/comment.dart' as protocol_comment;
 import '../protocol/models/contents.dart' as protocol_contents;
 import '../protocol/models/forum.dart' as protocol_forum;
+import '../protocol/models/search.dart';
 import '../protocol/models/thread.dart' as protocol_thread;
 import '../protocol/models/user.dart' as protocol_user;
 import 'models/content_node.dart';
@@ -69,6 +71,11 @@ class ProtocolBrowseRepository {
       totalPage: page.page.totalPage,
       hasMore: page.hasMore,
     );
+  }
+
+  Future<List<SearchGlobal>> searchGlobal(String query, {int pn = 1}) async {
+    final page = await fetchSearchGlobal(_core, query: query, pn: pn, rn: 20);
+    return page.objs;
   }
 
   Future<ThreadPageData> threadPage(int tid, {int pn = 1}) async {

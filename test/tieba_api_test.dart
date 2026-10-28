@@ -16,6 +16,14 @@ void main() {
     );
   });
 
+  test('protocol credential validation rejects malformed BDUSS', () async {
+    TiebaApi.instance.reset();
+    await expectLater(
+      TiebaApi.instance.validateCredentials('short'),
+      throwsA(isA<TiebaValueException>()),
+    );
+  });
+
   test('protocol error messages stay human readable', () {
     expect(
       tiebaErrorMessage(const TiebaValueException('请先登录贴吧账号')),

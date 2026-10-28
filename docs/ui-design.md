@@ -2,7 +2,7 @@
 
 > 目标：把 Feiba 从“能用”提升为“愿意每天打开”的贴吧客户端界面。
 > 参考：TiebaLite 4.x 的信息层级、底部导航、信息流卡片和帖子详情结构。
-> 实现：Flutter / Material 3。首页/吧页/帖子页使用 `lib/data/protocol_browse_repository.dart` 的协议层 `getThreads` / `getPosts` / `getComments`；账号动作通过 `lib/core/tieba_api.dart`。
+> 实现：Flutter / Material 3。首页/吧页/帖子页使用 `lib/data/protocol_browse_repository.dart` 的协议层 `getThreads` / `getPosts` / `getComments`；搜索使用 `fetchSearchGlobal`，登录校验使用 `fetchLogin`，账号动作通过 `lib/core/tieba_api.dart`。
 
 ## 1. 参考与素材边界
 
@@ -94,7 +94,7 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 - 蓝色渐变品牌头 + 登录说明；
 - BDUSS 默认隐藏，可切换显示；STOKEN 可选；
-- 登录按钮、状态消息、退出登录；游客可直接返回继续浏览；
+- 登录按钮、状态消息、退出登录；BDUSS 由协议层 `fetchLogin` 校验；游客可直接返回继续浏览；
 - “如何获取 BDUSS”折叠说明；
 - 凭据仅本机保存的提示。
 
@@ -138,7 +138,8 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 `lib/data/protocol_browse_repository.dart`，底层是协议层的
 `fetchThreads` / `fetchPosts` / `fetchComments`。
 
-账号动作通过 `lib/core/tieba_api.dart` 调协议层；搜索和登录校验仍使用旧 JSON 端点。
+搜索使用 `fetchSearchGlobal`，登录校验使用 `fetchLogin`；账号动作通过
+`lib/core/tieba_api.dart` 调协议层。旧 JSON 端点只保留在工具和兼容代码中。
 
 已接入协议层：
 
@@ -164,7 +165,7 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 - `test/ui_components_test.dart`：ThreadCard 深色主题、NameAvatar 圆形裁切；
 - `test/local_library_test.dart`：游客历史/收藏/关注、最近搜索、主题持久化；
 - `test/guest_ui_test.dart`：游客个人页、本地空间 tabs；
-- `test/tieba_api_test.dart`：未登录时协议桥的拒绝与错误文案；
+- `test/tieba_api_test.dart`：未登录/BDUSS 格式错误时协议桥的拒绝与错误文案；
 - 协议层信息流通过 `tool/protocol_smoke.dart` 与真机页面联调；
 - 首页通过 `HomePage(loadFeed: false)` 支持无网络组件测试；
 - 组件测试不依赖真实贴吧接口。

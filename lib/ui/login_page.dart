@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/session.dart';
 import '../core/tieba_api.dart';
-import '../core/tieba_client.dart';
-import '../data/tieba_repository.dart';
+import '../protocol/core/exceptions.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,7 +12,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TiebaRepository _repo = TiebaRepository();
   late final TextEditingController _bduss = TextEditingController(
     text: Session.instance.bduss ?? '',
   );
@@ -47,16 +45,11 @@ class _LoginPageState extends State<LoginPage> {
       _message = null;
     });
     try {
-      final account = await _repo.checkAccount(value);
-      if (!mounted) return;
-      if (account == null) {
-        setState(() {
-          _success = false;
-          _message = 'BDUSS 无效或已过期';
-        });
-        return;
-      }
       TiebaApi.instance.reset();
+      final account = await TiebaApi.instance.validateCredentials(
+        value,
+        stoken: _stoken.text.trim(),
+      );
       await Session.instance.save(
         bduss: value,
         stoken: _stoken.text.trim(),
@@ -67,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
         _success = true;
         _message = '登录成功：${account.userName}';
       });
-    } on TiebaApiException catch (error) {
+    } on TiebaException catch (error) {
       if (!mounted) return;
       setState(() {
         _success = false;

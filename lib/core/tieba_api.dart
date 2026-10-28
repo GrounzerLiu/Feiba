@@ -18,8 +18,8 @@ String tiebaErrorMessage(Object error) {
 
 /// Lazy bridge between the account session and the ported protocol layer.
 ///
-/// Read-only browsing still uses the lightweight JSON path; account-bound
-/// actions use this service so they hit the real Tieba APIs.
+/// Browsing uses `ProtocolBrowseRepository`; this service covers
+/// account-bound actions and login validation through the ported protocol.
 class TiebaApi {
   TiebaApi._();
 
@@ -59,6 +59,34 @@ class TiebaApi {
     await fetchLogin(http);
     _http = http;
     return http;
+  }
+
+  /// Validates a BDUSS/STOKEN pair with the app login endpoint.
+  ///
+  /// On success the validated HTTP core is kept so the next profile or
+  /// notification request does not log in again.
+  Future<TiebaLoginInfo> validateCredentials(
+    String bduss, {
+    String? stoken,
+  }) async {
+    final value = bduss.trim();
+    if (value.isEmpty) {
+      throw const TiebaValueException('请先填写 BDUSS');
+    }
+    if (value.length != 192) {
+      throw const TiebaValueException('BDUSS 长度异常，请从浏览器重新复制');
+    }
+    final rawStoken = stoken?.trim() ?? '';
+    final account = TiebaAccount(
+      bduss: value,
+      stoken: rawStoken.length == 64 ? rawStoken : '',
+    );
+    final http = TiebaHttpCore(account: account);
+    final info = await fetchLogin(http);
+    _http = http;
+    _pending = null;
+    _self = null;
+    return info;
   }
 
   Future<protocol.TiebaUser> selfProfile({bool refresh = false}) async {
