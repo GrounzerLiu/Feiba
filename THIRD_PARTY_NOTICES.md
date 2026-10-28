@@ -29,6 +29,13 @@
 - 使用方式：Flutter 3.47 后官方 Material UI 包；本项目用其 Material 组件、MaterialShapes、
   MaterialShapeBorder 和 M3 Expressive IconButton。
 
+## webview_flutter_windows / WebView2
+
+- 项目：https://github.com/omar-hanafy/webview_flutter_windows
+- 许可证：BSD-3-Clause（基于 jnschulze/flutter-webview-windows）
+- 使用方式：Windows 内置 WebView2 登录页；通过 WebView2 CookieManager 读取 HttpOnly 的 BDUSS/STOKEN。
+- 运行时依赖：Microsoft Edge WebView2 Runtime（Windows 11 自带，Windows 10 可由系统安装）；WebView2 SDK 由 Microsoft 提供。
+
 ## Dart / Flutter 依赖
 
 见 pubspec.yaml，各自遵循其 pub.dev 许可证。
