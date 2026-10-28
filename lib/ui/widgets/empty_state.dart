@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+
+import 'morphing_shape.dart';
 
 class EmptyState extends StatelessWidget {
   const EmptyState({
@@ -23,13 +25,9 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
+            MorphingShape(
+              size: 64,
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               child: Icon(icon, color: theme.colorScheme.primary, size: 30),
             ),
             const SizedBox(height: 18),

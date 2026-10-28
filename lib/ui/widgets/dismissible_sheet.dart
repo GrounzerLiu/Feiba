@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A bottom-sheet body with one resting height and a continuous close gesture.
 ///

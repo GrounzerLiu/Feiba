@@ -1,6 +1,6 @@
 import 'package:feiba/core/session.dart';
 import 'package:feiba/ui/auth_gate.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

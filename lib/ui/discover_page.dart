@@ -1,5 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/image_cache.dart';
 
@@ -14,6 +14,7 @@ import 'forum_page.dart';
 import 'search_page.dart';
 import 'thread_page.dart';
 import 'widgets/forum_avatar.dart';
+import 'widgets/morphing_shape.dart';
 import 'widgets/thread_card.dart';
 
 class DiscoverPage extends StatefulWidget {
@@ -180,6 +181,20 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    MorphingShape(
+                      size: 42,
+                      color: theme.colorScheme.primaryContainer,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SearchPage(),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.travel_explore_rounded,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

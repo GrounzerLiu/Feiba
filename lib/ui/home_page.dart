@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/local_library.dart';
 import '../core/session.dart';
@@ -16,6 +16,7 @@ import 'search_page.dart';
 import 'thread_page.dart';
 import 'user_page.dart';
 import 'widgets/forum_avatar.dart';
+import 'widgets/morphing_shape.dart';
 import 'widgets/name_avatar.dart';
 import 'widgets/thread_card.dart';
 
@@ -249,6 +250,16 @@ class _HomePageState extends State<HomePage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    MorphingShape(
+                      size: 42,
+                      color: theme.colorScheme.primaryContainer,
+                      onTap: _goExplore,
+                      child: Icon(
+                        Icons.people_alt_rounded,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

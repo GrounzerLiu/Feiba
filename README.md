@@ -24,7 +24,7 @@
 
 | 用途 | 选型 |
 | --- | --- |
-| UI | Flutter 3.47+ / Material 3 |
+| UI | Flutter 3.47+ / `material_ui` 1.8 / Material 3 + 官方 M3E 局部能力 |
 | 网络 | dio |
 | 协议签名 | crypto（MD5） |
 | 富文本内容 | 自定义 `ContentView`（文本 / 表情 / 图片 / 话题链接） |
@@ -50,7 +50,9 @@
 - 吧页：渐变吧头、排序 chips、缩略图信息流
 - 帖子页：协议层楼层卡片、富文本/图片网格、楼中楼 BottomSheet、收藏/复制链接、点赞接口
 
-设计说明与许可证边界见 [docs/ui-design.md](docs/ui-design.md)。关注/广场/吧页/帖子页均已使用
+设计说明与许可证边界见 [docs/ui-design.md](docs/ui-design.md)。界面已迁移到官方
+`material_ui` 包，并使用当前官方提供的 M3 Expressive 形状、IconButton 和转场能力；
+没有引入完整的第三方 M3E 组件包。关注/广场/吧页/帖子页均已使用
 `lib/data/protocol_browse_repository.dart` 的协议层数据；搜索同时使用协议吧搜索和 `fetchSearchGlobal`，
 登录校验使用 `fetchLogin`，登录后的消息/资料/关注/点赞/签到通过
 `lib/core/tieba_api.dart` 调用协议层。

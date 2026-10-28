@@ -22,6 +22,13 @@
 - xxHash：Yann Collet，BSD-2-Clause
 - 使用方式：算法语义参考并移植为 Dart（lib/protocol/core/crypto.dart）。
 
+## material_ui
+
+- 项目：https://pub.dev/packages/material_ui
+- 许可证：BSD-3-Clause
+- 使用方式：Flutter 3.47 后官方 Material UI 包；本项目用其 Material 组件、MaterialShapes、
+  MaterialShapeBorder 和 M3 Expressive IconButton。
+
 ## Dart / Flutter 依赖
 
 见 pubspec.yaml，各自遵循其 pub.dev 许可证。

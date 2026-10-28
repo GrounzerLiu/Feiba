@@ -1,11 +1,12 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/session.dart';
 import '../core/tieba_api.dart';
 import '../protocol/core/exceptions.dart';
 import 'web_login_page.dart';
+import 'widgets/morphing_shape.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -129,13 +130,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
             child: Row(
               children: <Widget>[
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                MorphingShape(
+                  size: 52,
+                  color: Colors.white.withValues(alpha: 0.18),
+                  restShape: MaterialShapes.clover4Leaf,
                   child: const Icon(
                     Icons.forum_rounded,
                     color: Colors.white,

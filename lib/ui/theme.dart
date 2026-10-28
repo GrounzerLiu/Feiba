@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Feiba brand blue, derived from the Tieba visual language.
 const Color kSeedColor = Color(0xFF4477E0);
@@ -70,6 +70,22 @@ ThemeData buildAppTheme(Brightness brightness) {
     canvasColor: isDark ? kDarkBackground : kLightBackground,
     textTheme: textTheme,
     splashFactory: InkSparkle.splashFactory,
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: <TargetPlatform, PageTransitionsBuilder>{
+        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.macOS: FadeForwardsPageTransitionsBuilder(),
+      },
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      variant: StyleVariant.material3Expressive,
+      style: IconButton.styleFrom(
+        sizeVariant: ButtonSizeVariant.small,
+        iconButtonWidth: IconButtonWidthVariant.standard,
+        shapeVariant: ButtonShapeVariant.round,
+      ),
+    ),
     appBarTheme: AppBarTheme(
       centerTitle: false,
       elevation: 0,

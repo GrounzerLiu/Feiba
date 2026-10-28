@@ -212,3 +212,22 @@ Android/Windows 共用同一套磁盘缓存策略：
 - 上限：stable 400 个对象、versioned 600 个对象，超出后 LRU 淘汰；
 - “我的 → 清理图片缓存”会同时清理磁盘和 Flutter 内存图片缓存；
 - 只缓存图片，不缓存信息流、话题榜、关注列表等会频繁变化的数据。
+## M3 Expressive（官方能力）
+
+Flutter 3.47 起 Material 组件由官方 `material_ui` 包提供。项目已通过
+`dart fix --apply --code=migrate_design_widgets` 完成 import 迁移，未引入
+`material_3_expressive` 等第三方完整组件包。
+
+当前使用的官方 M3E 能力：
+
+- `MaterialShapes` / `RoundedPolygon` / `CornerRounding`：登录页 logo、空态图标和首页/广场
+  标题旁使用 cookie / clover 形状；
+- `MaterialShapeBorder` + `ShapeBorderTween` + `SpringSimulation`：`MorphingShape` 的按压
+  形变；
+- `IconButtonThemeData(variant: StyleVariant.material3Expressive)`：官方 Expressive
+  IconButton 尺寸、宽度和形状；
+- `FadeForwardsPageTransitionsBuilder`：页面转场；
+- 其余仍是 Material 3 基础组件。
+
+完整 M3E 的 ButtonGroup、SplitButton、FAB Menu、LoadingIndicator、Wavy Slider、
+ExpressiveSheet 等官方尚未提供，项目没有用第三方实现冒充。
