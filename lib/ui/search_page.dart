@@ -32,15 +32,6 @@ class _SearchPageState extends State<SearchPage> {
   String? _error;
   bool _searched = false;
 
-  static const List<String> _suggestions = <String>[
-    '原神',
-    '孙笑川',
-    'steam',
-    '明日方舟',
-    '崩坏星穹铁道',
-    '摄影',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -206,33 +197,35 @@ class _SearchPageState extends State<SearchPage> {
                       icon: const Icon(Icons.arrow_back_rounded),
                     ),
                     Expanded(
-                      child: TextField(
+                      child: SearchBar(
                         controller: _controller,
-                        autofocus: widget.initialKeyword.isEmpty,
-                        textInputAction: TextInputAction.search,
+                        hintText: '搜索贴吧或全站讨论',
+                        leading: const Icon(Icons.search_rounded),
+                        trailing: <Widget>[
+                          if (_controller.text.isNotEmpty)
+                            IconButton(
+                              tooltip: '清空',
+                              onPressed: () {
+                                _controller.clear();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.close_rounded),
+                            ),
+                        ],
+                        elevation: const WidgetStatePropertyAll<double>(0),
+                        padding:
+                            const WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                              EdgeInsets.symmetric(horizontal: 14),
+                            ),
                         onSubmitted: (_) => _search(),
-                        decoration: InputDecoration(
-                          hintText: '搜索吧和全站讨论',
-                          prefixIcon: const Icon(Icons.search_rounded),
-                          suffixIcon: _controller.text.isEmpty
-                              ? null
-                              : IconButton(
-                                  onPressed: () {
-                                    _controller.clear();
-                                    setState(() {});
-                                  },
-                                  icon: const Icon(Icons.close_rounded),
-                                ),
-                        ),
                         onChanged: (_) => setState(() {}),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    FilledButton(
+                    const SizedBox(width: 4),
+                    TextButton(
                       onPressed: _search,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 46),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 44),
                       ),
                       child: const Text('搜索'),
                     ),
@@ -283,23 +276,6 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                       const SizedBox(height: 24),
                     ],
-                    Text('热门搜索', style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        for (final suggestion in _suggestions)
-                          ActionChip(
-                            label: Text(suggestion),
-                            onPressed: () {
-                              _controller.text = suggestion;
-                              _search();
-                            },
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 34),
                     const EmptyState(
                       icon: Icons.travel_explore_rounded,
                       title: '从一个关键词开始',

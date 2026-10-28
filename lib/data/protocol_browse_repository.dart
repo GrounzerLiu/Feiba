@@ -1,22 +1,30 @@
+import '../protocol/api/forum_extra.dart' show fetchSquareForums;
 import '../protocol/api/get_comments.dart';
 import '../protocol/api/get_forum.dart';
+import '../protocol/api/get_homepage.dart';
 import '../protocol/api/get_posts.dart';
 import '../protocol/api/get_threads.dart';
 import '../protocol/api/search_global.dart';
 import '../protocol/core/account.dart';
 import '../protocol/core/enums.dart';
 import '../protocol/core/http_core.dart';
+import '../protocol/core/utils.dart';
 import '../protocol/models/comment.dart' as protocol_comment;
 import '../protocol/models/contents.dart' as protocol_contents;
 import '../protocol/models/forum.dart' as protocol_forum;
+import '../protocol/models/homepage.dart' as protocol_homepage;
 import '../protocol/models/search.dart';
 import '../protocol/models/thread.dart' as protocol_thread;
 import '../protocol/models/user.dart' as protocol_user;
 import 'models/content_node.dart';
+import 'models/feed.dart';
 import 'models/forum_page.dart';
 import 'models/forum_search.dart';
+import 'models/forum_summary.dart';
+import 'models/hot_topic.dart';
 import 'models/thread_page.dart';
 import 'models/tieba_user.dart';
+import 'models/user_page.dart';
 
 /// Protocol-backed browsing for forum and thread pages.
 ///
@@ -79,6 +87,98 @@ class ProtocolBrowseRepository {
     );
   }
 
+  Future<ThreadFeed> forumFeed(
+    String fname, {
+    int pn = 1,
+    int limit = 20,
+    bool hot = false,
+  }) async {
+    final page = await fetchThreads(
+      _core,
+      fname: fname,
+      pn: pn,
+      rn: limit,
+      sort: hot ? ThreadSortType.hot : ThreadSortType.reply,
+    );
+    final users = <int, TiebaUser>{};
+    final threads = <ThreadSummary>[];
+    for (final thread in page.objs) {
+      final user = thread.user;
+      if (user != null) users[user.userId] = _mapUser(user);
+      threads.add(_mapThread(thread));
+    }
+    return ThreadFeed(threads: threads, users: users);
+  }
+
+  Future<ForumSquarePage> squareForums(
+    String cname, {
+    int pn = 1,
+    int rn = 20,
+  }) async {
+    final page = await fetchSquareForums(_core, cname: cname, pn: pn, rn: rn);
+    return ForumSquarePage(
+      items: <ForumSummary>[
+        for (final forum in page.objs)
+          ForumSummary(
+            fid: forum.fid,
+            name: forum.fname,
+            memberNum: forum.memberNum,
+            threadNum: forum.threadNum,
+            isFollowed: forum.isFollowed,
+          ),
+      ],
+      hasMore: page.hasMore,
+    );
+  }
+
+  Future<ForumSummary?> forumInfo(String fname) async {
+    try {
+      final forum = await fetchForum(_core, fname);
+      return ForumSummary(
+        fid: forum.fid,
+        name: forum.fname,
+        memberNum: forum.memberNum,
+        threadNum: forum.postNum,
+        isLocal: true,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<UserPageData> userHomepage(int userId) async {
+    final page = await fetchHomepage(_core, userId: userId);
+    final users = <int, TiebaUser>{};
+    final protocolUser = page.user;
+    if (protocolUser != null) {
+      users[protocolUser.userId] = _mapUser(protocolUser);
+    }
+    final threads = <ThreadSummary>[];
+    for (final thread in page.threads) {
+      final user = thread.user;
+      if (user != null) users[user.userId] = _mapUser(user);
+      threads.add(_mapHomepageThread(thread));
+    }
+    return UserPageData(
+      profile: protocolUser == null
+          ? null
+          : UserProfile(
+              id: protocolUser.userId,
+              name: protocolUser.displayName,
+              avatar: protocolUser.avatarUrl,
+              level: protocolUser.level,
+              postNum: protocolUser.postNum,
+              fanNum: protocolUser.fanNum,
+              followNum: protocolUser.followNum,
+              forumNum: protocolUser.forumNum,
+              sign: protocolUser.sign,
+              isVip: protocolUser.isVip,
+            ),
+      threads: threads,
+      users: users,
+    );
+  }
+
   /// Resolves a forum avatar lazily; repeated cards share one request.
   Future<String?> forumAvatar(String name) {
     final key = name.trim();
@@ -91,6 +191,46 @@ class ProtocolBrowseRepository {
         return null;
       }
     });
+  }
+
+  Future<List<HotTopic>> hotTopics() async {
+    final json = await _core.webGetJson(
+      '/mo/q/hotMessage/list',
+      query: <String, String>{'fr': 'newwise'},
+    );
+    final data = json['data'];
+    if (data is! Map) return const <HotTopic>[];
+    final list = data['list'];
+    if (list is! Map) return const <HotTopic>[];
+    final raw = _list(list['ret']);
+    final topics = <HotTopic>[];
+    for (final item in raw.whereType<Map>()) {
+      final map = item.cast<String, dynamic>();
+      final info = map['topic_info'] is Map
+          ? (map['topic_info'] as Map).cast<String, dynamic>()
+          : const <String, dynamic>{};
+      final name = parseString(map['mul_name']);
+      if (name.isEmpty) continue;
+      final image = parseString(info['pc_hpic']).isNotEmpty
+          ? parseString(info['pc_hpic'])
+          : parseString(info['head_pic']);
+      topics.add(
+        HotTopic(
+          id: parseInt(map['mul_id']),
+          name: name,
+          description: parseString(info['topic_desc']),
+          discussNum: parseInt(info['real_discuss_num']),
+          imageUrl: image.isEmpty
+              ? null
+              : image.replaceFirst('http://', 'https://'),
+          rank: parseInt(info['idx_bang']),
+          tag: parseInt(info['topic_tag']),
+          isVideo: parseInt(info['is_video_topic']) != 0,
+        ),
+      );
+    }
+    topics.sort((a, b) => a.rank.compareTo(b.rank));
+    return topics;
   }
 
   Future<List<ForumSearchResult>> searchForums(String keyword) async {
@@ -177,6 +317,23 @@ class ProtocolBrowseRepository {
     );
   }
 
+  ThreadSummary _mapHomepageThread(protocol_homepage.HomepageThread thread) {
+    return ThreadSummary(
+      tid: thread.tid,
+      title: thread.title,
+      content: _contentsToNodes(thread.contents),
+      abstract: thread.preview,
+      replyNum: thread.replyNum,
+      viewNum: thread.viewNum,
+      agreeNum: thread.agreeNum,
+      authorId: thread.user?.userId ?? 0,
+      createTime: thread.createTime,
+      lastTime: thread.createTime,
+      fid: thread.fid,
+      forumName: thread.fname,
+    );
+  }
+
   ThreadSummary _mapThread(protocol_thread.TiebaThread thread) {
     return ThreadSummary(
       tid: thread.tid,
@@ -191,6 +348,8 @@ class ProtocolBrowseRepository {
       lastTime: thread.lastTime,
       isTop: thread.isTop,
       isGood: thread.isGood,
+      fid: thread.fid,
+      forumName: thread.fname,
     );
   }
 

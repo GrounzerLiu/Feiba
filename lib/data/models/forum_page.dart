@@ -44,6 +44,8 @@ class ThreadSummary {
     this.lastTime = 0,
     this.isTop = false,
     this.isGood = false,
+    this.fid = 0,
+    this.forumName = '',
   });
 
   factory ThreadSummary.fromJson(Map<String, dynamic> json) {
@@ -60,6 +62,8 @@ class ThreadSummary {
       lastTime: (json['last_time_int'] as num?)?.toInt() ?? 0,
       isTop: ((json['is_top'] as num?)?.toInt() ?? 0) != 0,
       isGood: ((json['is_good'] as num?)?.toInt() ?? 0) != 0,
+      fid: (json['fid'] as num?)?.toInt() ?? 0,
+      forumName: (json['forum_name'] ?? '').toString(),
     );
   }
 
@@ -75,6 +79,8 @@ class ThreadSummary {
   final int lastTime;
   final bool isTop;
   final bool isGood;
+  final int fid;
+  final String forumName;
 
   String get preview => nodesToPlainText(content);
 

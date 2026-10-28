@@ -2,20 +2,28 @@ import 'package:flutter/material.dart';
 
 import '../core/local_library.dart';
 import '../core/session.dart';
+import '../core/tieba_api.dart';
+import '../data/models/feed.dart';
 import '../data/models/forum_page.dart';
+import '../data/models/forum_summary.dart';
+import '../data/models/tieba_user.dart';
 import '../data/protocol_browse_repository.dart';
+import 'discover_page.dart';
+import 'format.dart';
 import 'forum_page.dart';
 import 'login_page.dart';
 import 'search_page.dart';
 import 'thread_page.dart';
-import 'widgets/section_header.dart';
+import 'user_page.dart';
+import 'widgets/forum_avatar.dart';
+import 'widgets/name_avatar.dart';
 import 'widgets/thread_card.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.loadFeed = true});
+  const HomePage({super.key, this.loadFeed = true, this.onExplore});
 
-  /// Allows widget tests to render the static shell without network I/O.
   final bool loadFeed;
+  final VoidCallback? onExplore;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -24,24 +32,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
 
-  List<ThreadSummary> _threads = const <ThreadSummary>[];
-  Map<int, dynamic> _users = const <int, dynamic>{};
   bool _loading = false;
+  bool _loggedIn = false;
   String? _error;
-
-  static const List<_HotForum> _hotForums = <_HotForum>[
-    _HotForum('原神', '游戏', Color(0xFF5B8DEF), Icons.sports_esports_rounded),
-    _HotForum('孙笑川', '人物', Color(0xFFE08A4D), Icons.record_voice_over_rounded),
-    _HotForum('李毅', '体育', Color(0xFF3FAE8F), Icons.sports_soccer_rounded),
-    _HotForum('steam', '游戏', Color(0xFF4C6E9E), Icons.videogame_asset_rounded),
-    _HotForum('明日方舟', '游戏', Color(0xFF7C6CF2), Icons.auto_awesome_rounded),
-    _HotForum('崩坏星穹铁道', '游戏', Color(0xFFD9647A), Icons.rocket_launch_rounded),
-  ];
+  String? _accountWarning;
+  List<ForumSummary> _forums = const <ForumSummary>[];
+  List<TiebaUser> _people = const <TiebaUser>[];
+  ThreadFeed _feed = ThreadFeed.empty;
+  List<String> _recentForums = const <String>[];
 
   @override
   void initState() {
     super.initState();
     LocalLibrary.instance.addListener(_onLibraryChanged);
+    _syncLocal();
     if (widget.loadFeed) _load();
   }
 
@@ -52,50 +56,163 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onLibraryChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    _syncLocal();
+    setState(() {});
+  }
+
+  void _syncLocal() {
+    _loggedIn = Session.instance.isLoggedIn;
+    _recentForums = LocalLibrary.instance.recentForums;
   }
 
   Future<void> _load() async {
+    if (!widget.loadFeed) {
+      _syncLocal();
+      setState(() => _loading = false);
+      return;
+    }
     if (_loading) return;
     setState(() {
       _loading = true;
       _error = null;
+      _accountWarning = null;
     });
-    try {
-      final page = await _repo.forumPage('原神');
-      if (!mounted) return;
-      setState(() {
-        _threads = page.threads.take(8).toList(growable: false);
-        _users = page.users;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
+
+    final loggedIn = Session.instance.isLoggedIn;
+    final accountForums = <ForumSummary>[];
+    final accountPeople = <TiebaUser>[];
+    String? warning;
+
+    if (loggedIn) {
+      try {
+        final forums = await TiebaApi.instance.followedForums();
+        accountForums.addAll(
+          forums.map(
+            (forum) => ForumSummary(
+              fid: forum.fid,
+              name: forum.fname,
+              memberNum: forum.memberCount,
+              threadNum: forum.threadNum,
+              isFollowed: true,
+              level: forum.level,
+              hotNum: forum.hotNum,
+              todayThreadNum: forum.todayThreadNum,
+              isSigned: forum.isSigned,
+            ),
+          ),
+        );
+      } catch (error) {
+        warning = '账号关注同步失败：${tiebaErrorMessage(error)}';
+      }
+      try {
+        final users = await TiebaApi.instance.followedUsers();
+        accountPeople.addAll(
+          users.map(
+            (user) => TiebaUser(
+              id: user.userId,
+              name: user.userName,
+              nameShow: user.nickNameNew,
+              portrait: user.portrait,
+            ),
+          ),
+        );
+      } catch (error) {
+        warning ??= '关注的人同步失败：${tiebaErrorMessage(error)}';
+      }
     }
+
+    final localNames = LocalLibrary.instance.followedForums;
+    final useLocal = !loggedIn || accountForums.isEmpty;
+    final names = <String>[
+      if (!useLocal)
+        for (final forum in accountForums) forum.name,
+      if (useLocal) ...localNames,
+    ];
+    final uniqueNames = <String>[];
+    final seen = <String>{};
+    for (final name in names) {
+      if (name.trim().isNotEmpty && seen.add(name)) uniqueNames.add(name);
+    }
+
+    var forums = accountForums;
+    if (useLocal) {
+      final resolved = await Future.wait(
+        uniqueNames.map((name) async {
+          final info = await _repo.forumInfo(name);
+          return info ?? ForumSummary(fid: 0, name: name, isLocal: true);
+        }),
+      );
+      forums = resolved
+          .where((forum) => forum.name.isNotEmpty)
+          .toList(growable: false);
+    }
+
+    ThreadFeed feed = ThreadFeed.empty;
+    if (uniqueNames.isNotEmpty) {
+      final sources = uniqueNames.take(4).toList(growable: false);
+      final feeds = await Future.wait(
+        sources.map((name) async {
+          try {
+            return await _repo.forumFeed(name, limit: 20);
+          } catch (_) {
+            return ThreadFeed.empty;
+          }
+        }),
+      );
+      final threads = <ThreadSummary>[];
+      final users = <int, TiebaUser>{};
+      final seenThreads = <int>{};
+      for (final source in feeds) {
+        users.addAll(source.users);
+        for (final thread in source.threads) {
+          if (thread.tid == 0 || !seenThreads.add(thread.tid)) continue;
+          threads.add(thread);
+        }
+      }
+      threads.sort((a, b) {
+        final at = a.lastTime > 0 ? a.lastTime : a.createTime;
+        final bt = b.lastTime > 0 ? b.lastTime : b.createTime;
+        return bt.compareTo(at);
+      });
+      feed = ThreadFeed(
+        threads: threads.take(12).toList(growable: false),
+        users: users,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _loggedIn = loggedIn;
+      _forums = forums;
+      _people = accountPeople;
+      _feed = feed;
+      _recentForums = LocalLibrary.instance.recentForums;
+      _accountWarning = warning;
+      _loading = false;
+      _error = uniqueNames.isEmpty && warning != null ? warning : null;
+    });
   }
 
-  void _openForum(String name) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)));
-  }
+  void _openForum(String name) => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)));
 
-  void _openSearch() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const SearchPage()));
-  }
+  void _openUser(TiebaUser user) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => UserPage(userId: user.id, initialName: user.displayName),
+    ),
+  );
 
   void _openThread(ThreadSummary thread) {
-    final author = _users[thread.authorId];
+    final author = _feed.users[thread.authorId];
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ThreadPage(
           tid: thread.tid,
           title: thread.title,
-          forumName: '原神吧',
-          authorName: author?.displayName as String?,
+          forumName: thread.forumName,
+          authorName: author?.displayName,
         ),
       ),
     );
@@ -104,310 +221,305 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openAccount() async {
     await Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => const LoginPage()));
-    if (mounted) setState(() {});
+    if (mounted) _load();
+  }
+
+  void _goExplore() {
+    final callback = widget.onExplore;
+    if (callback != null) {
+      callback();
+      return;
+    }
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const DiscoverPage()));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final loggedIn = Session.instance.isLoggedIn;
-    final followed = LocalLibrary.instance.followedForums;
-    final shortcuts = <_HotForum>[
-      for (final name in followed)
-        _HotForum(name, '已关注', theme.colorScheme.primary, Icons.star_rounded),
-      ..._hotForums.where((forum) => !followed.contains(forum.name)),
-    ];
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: <Widget>[
-            SliverToBoxAdapter(
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 14, 0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text('贴吧', style: theme.textTheme.headlineSmall),
-                            const SizedBox(height: 4),
-                            Text(
-                              '来看看今天大家在聊什么',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton.filledTonal(
-                        tooltip: loggedIn ? '账号' : '登录',
-                        onPressed: _openAccount,
-                        icon: Icon(
-                          loggedIn
-                              ? Icons.account_circle_rounded
-                              : Icons.account_circle_outlined,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        body: Column(
+          children: <Widget>[
+            SafeArea(
+              bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                child: _SearchEntry(onTap: _openSearch),
-              ),
-            ),
-            if (LocalLibrary.instance.history.isNotEmpty) ...<Widget>[
-              const SliverToBoxAdapter(
-                child: SectionHeader(title: '最近浏览', subtitle: '从上次停下的地方继续'),
-              ),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 82,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: LocalLibrary.instance.history.take(6).length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final item = LocalLibrary.instance.history[index];
-                      return _RecentThreadCard(
-                        item: item,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => ThreadPage(
-                              tid: item.tid,
-                              title: item.title,
-                              forumName: item.forumName,
-                              authorName: item.authorName,
+                padding: const EdgeInsets.fromLTRB(20, 10, 8, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text('关注', style: theme.textTheme.headlineSmall),
+                          const SizedBox(height: 3),
+                          Text(
+                            _loggedIn ? '你关注的人和吧，都在这里' : '本地关注 · 登录后同步贴吧账号',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-            const SliverToBoxAdapter(
-              child: SectionHeader(title: '常逛的吧', subtitle: '挑一个感兴趣的角落'),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 116,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: shortcuts.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) {
-                    final forum = shortcuts[index];
-                    return _ForumShortcut(
-                      forum: forum,
-                      onTap: () => _openForum(forum.name),
-                    );
-                  },
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SectionHeader(
-                title: '热门讨论',
-                subtitle: '来自原神吧的实时动态',
-                action: '换一换',
-                onAction: _load,
-              ),
-            ),
-            if (_loading && _threads.isEmpty)
-              const SliverToBoxAdapter(child: _ThreadSkeleton())
-            else if (_error != null && _threads.isEmpty)
-              SliverToBoxAdapter(
-                child: _ErrorCard(message: _error!, onRetry: _load),
-              )
-            else if (_threads.isEmpty)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                  child: Text('这个吧暂时还没有帖子', textAlign: TextAlign.center),
-                ),
-              )
-            else
-              SliverList.builder(
-                itemCount: _threads.length,
-                itemBuilder: (context, index) {
-                  final thread = _threads[index];
-                  final user = _users[thread.authorId];
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-                    child: ThreadCard(
-                      thread: thread,
-                      authorName: user?.displayName as String?,
-                      authorAvatar: user?.avatarUrl as String?,
-                      forumName: '原神吧',
-                      onTap: () => _openThread(thread),
-                    ),
-                  );
-                },
-              ),
-            SliverToBoxAdapter(
-              child: SectionHeader(title: '探索更多', subtitle: '从这些方向开始'),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    for (final topic in <String>[
-                      '游戏',
-                      '二次元',
-                      '数码',
-                      '体育',
-                      '生活',
-                      '摄影',
-                    ])
-                      ActionChip(
-                        label: Text(topic),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => SearchPage(initialKeyword: topic),
-                            ),
-                          );
-                        },
+                        ],
                       ),
+                    ),
+                    IconButton(
+                      tooltip: '搜索',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SearchPage(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.search_rounded),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: _loggedIn ? '账号' : '登录',
+                      onPressed: _openAccount,
+                      icon: Icon(
+                        _loggedIn
+                            ? Icons.account_circle_rounded
+                            : Icons.account_circle_outlined,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const TabBar(
+              labelStyle: TextStyle(fontWeight: FontWeight.w700),
+              unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500),
+              dividerColor: Colors.transparent,
+              tabs: <Widget>[
+                Tab(text: '动态'),
+                Tab(text: '吧'),
+                Tab(text: '吧友'),
+                Tab(text: '看过'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: <Widget>[
+                  _feedTab(),
+                  _forumsTab(),
+                  _peopleTab(),
+                  _recentTab(),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-}
 
-class _RecentThreadCard extends StatelessWidget {
-  const _RecentThreadCard({required this.item, required this.onTap});
-
-  final LocalThread item;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _feedTab() {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: 210,
-          padding: const EdgeInsets.fromLTRB(13, 11, 13, 10),
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                item.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelLarge,
-              ),
-              const Spacer(),
-              Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.history_rounded,
-                    size: 13,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      item.forumName.isEmpty ? '浏览过的帖子' : item.forumName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchEntry extends StatelessWidget {
-  const _SearchEntry({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.primary.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-          child: Row(
-            children: <Widget>[
-              Icon(Icons.search_rounded, color: theme.colorScheme.primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '搜索贴吧，或直接输入吧名',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.75),
-                  ),
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+        children: <Widget>[
+          if (_accountWarning != null && _loggedIn)
+            _WarningNote(text: _accountWarning!),
+          if (_loading && _feed.threads.isEmpty)
+            const _ThreadSkeleton()
+          else if (_error != null && _feed.threads.isEmpty)
+            _ErrorCard(message: _error!, onRetry: _load)
+          else if (_feed.threads.isEmpty)
+            _TabEmpty(
+              icon: Icons.forum_outlined,
+              title: _forums.isEmpty ? '还没有关注动态' : '关注的吧暂时没有新帖',
+              description: _forums.isEmpty
+                  ? '先关注几个吧，这里会汇总他们最新的帖子。'
+                  : '过一会儿刷新看看，或者去广场发现更多吧。',
+              action: _forums.isEmpty ? '去广场' : '刷新',
+              onAction: _forums.isEmpty ? _goExplore : _load,
+            )
+          else ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+              child: Text(
+                '来自 ${_feed.threads.map((e) => e.forumName).toSet().length} 个关注的吧',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_rounded,
-                size: 18,
-                color: theme.colorScheme.primary.withValues(alpha: 0.7),
+            ),
+            for (final thread in _feed.threads)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ThreadCard(
+                  thread: thread,
+                  authorName: _feed.users[thread.authorId]?.displayName,
+                  authorAvatar: _feed.users[thread.authorId]?.avatarUrl,
+                  forumName: thread.forumName,
+                  onTap: () => _openThread(thread),
+                ),
               ),
-            ],
-          ),
-        ),
+          ],
+        ],
       ),
+    );
+  }
+
+  Widget _forumsTab() {
+    final theme = Theme.of(context);
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        children: <Widget>[
+          Text(
+            _loggedIn ? '来自贴吧账号' : '保存在本机',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (_loading && _forums.isEmpty)
+            const _ForumListSkeleton()
+          else if (_forums.isEmpty)
+            _TabEmpty(
+              icon: Icons.star_border_rounded,
+              title: _loggedIn ? '还没有关注贴吧' : '还没有本地关注',
+              description: '去广场挑几个感兴趣的吧，关注后会出现在这里。',
+              action: '去广场看看',
+              onAction: _goExplore,
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.45,
+              ),
+              itemCount: _forums.length,
+              itemBuilder: (context, index) {
+                final forum = _forums[index];
+                return _FollowedForumCard(
+                  width: null,
+                  repo: _repo,
+                  forum: forum,
+                  onTap: () => _openForum(forum.name),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _peopleTab() {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      children: <Widget>[
+        if (!_loggedIn)
+          _TabEmpty(
+            icon: Icons.people_outline_rounded,
+            title: '登录后查看关注的人',
+            description: '账号同步后，这里会显示你关注的吧友，点击可以查看对方主页。',
+            action: '登录',
+            onAction: _openAccount,
+            embedded: true,
+          )
+        else if (_people.isEmpty)
+          const _TabEmpty(
+            icon: Icons.people_outline_rounded,
+            title: '还没有关注的人',
+            description: '在吧里遇到感兴趣的吧友，可以在对方主页关注。',
+            embedded: true,
+          )
+        else ...<Widget>[
+          Text(
+            '已关注 ${_people.length} 人',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final user in _people)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _PersonTile(user: user, onTap: () => _openUser(user)),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _recentTab() {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      children: <Widget>[
+        if (_recentForums.isEmpty)
+          const _TabEmpty(
+            icon: Icons.history_rounded,
+            title: '还没有看过的吧',
+            description: '浏览过的贴吧会记录在这里，方便你再次进入。',
+            embedded: true,
+          )
+        else ...<Widget>[
+          Text(
+            '最近浏览 ${_recentForums.length} 个吧',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final name in _recentForums)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  onTap: () => _openForum(name),
+                  leading: NameAvatar(name: name, size: 36),
+                  title: Text(name),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                ),
+              ),
+            ),
+        ],
+      ],
     );
   }
 }
 
-class _ForumShortcut extends StatelessWidget {
-  const _ForumShortcut({required this.forum, required this.onTap});
+class _FollowedForumCard extends StatelessWidget {
+  const _FollowedForumCard({
+    required this.forum,
+    required this.repo,
+    required this.onTap,
+    this.width = 158,
+  });
 
-  final _HotForum forum;
+  final ForumSummary forum;
+  final ProtocolBrowseRepository repo;
   final VoidCallback onTap;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final detail = forum.hotNum > 0
+        ? '今日热帖 ${forum.hotNum}'
+        : forum.memberNum > 0
+        ? '${compactCount(forum.memberNum)} 成员'
+        : forum.isLocal
+        ? '本地关注'
+        : '进入贴吧';
     return Material(
       color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(18),
@@ -415,7 +527,7 @@ class _ForumShortcut extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          width: 146,
+          width: width,
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
             border: Border.all(color: theme.colorScheme.outlineVariant),
@@ -424,14 +536,28 @@ class _ForumShortcut extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: forum.color.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(forum.icon, size: 20, color: forum.color),
+              Row(
+                children: <Widget>[
+                  ForumAvatar(name: forum.name, repo: repo, size: 34),
+                  const Spacer(),
+                  if (forum.isSigned)
+                    Icon(
+                      Icons.verified_rounded,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                  if (forum.level > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        'Lv.${forum.level}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const Spacer(),
               Text(
@@ -440,9 +566,11 @@ class _ForumShortcut extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleSmall?.copyWith(fontSize: 14),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
-                forum.tag,
+                detail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -455,87 +583,124 @@ class _ForumShortcut extends StatelessWidget {
   }
 }
 
-class _ThreadSkeleton extends StatelessWidget {
-  const _ThreadSkeleton();
+class _PersonTile extends StatelessWidget {
+  const _PersonTile({required this.user, required this.onTap});
+
+  final TiebaUser user;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final line = theme.colorScheme.surfaceContainerHighest;
-    return Column(
-      children: <Widget>[
-        for (var i = 0; i < 3; i++)
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-            padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: line,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 9),
-                    Container(
-                      width: 112,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: line,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 48,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: line.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: line,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 190,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: line.withValues(alpha: 0.75),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  height: 82,
-                  decoration: BoxDecoration(
-                    color: line.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                ),
-              ],
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        onTap: onTap,
+        leading: NameAvatar(
+          name: user.displayName,
+          imageUrl: user.avatarUrl,
+          size: 44,
+        ),
+        title: Text(user.displayName),
+        subtitle: Text(
+          '查看主页和最近发帖',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
+}
+
+class _WarningNote extends StatelessWidget {
+  const _WarningNote({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            Icons.info_outline_rounded,
+            size: 16,
+            color: theme.colorScheme.error,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onErrorContainer,
+              ),
             ),
           ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TabEmpty extends StatelessWidget {
+  const _TabEmpty({
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.action,
+    this.onAction,
+    this.embedded = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final String? action;
+  final VoidCallback? onAction;
+  final bool embedded;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: embedded ? EdgeInsets.zero : const EdgeInsets.only(top: 40),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        children: <Widget>[
+          Icon(icon, size: 32, color: theme.colorScheme.primary),
+          const SizedBox(height: 10),
+          Text(title, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 5),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
+          ),
+          if (action != null) ...<Widget>[
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onAction, child: Text(action!)),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -550,7 +715,7 @@ class _ErrorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 5, 16, 5),
+      margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
@@ -564,7 +729,12 @@ class _ErrorCard extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text('加载失败，检查网络后再试', style: theme.textTheme.bodySmall),
+            child: Text(
+              message,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall,
+            ),
           ),
           TextButton(onPressed: onRetry, child: const Text('重试')),
         ],
@@ -573,11 +743,78 @@ class _ErrorCard extends StatelessWidget {
   }
 }
 
-class _HotForum {
-  const _HotForum(this.name, this.tag, this.color, this.icon);
+class _ForumListSkeleton extends StatelessWidget {
+  const _ForumListSkeleton();
 
-  final String name;
-  final String tag;
-  final Color color;
-  final IconData icon;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final line = theme.colorScheme.surfaceContainerHighest;
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.45,
+      children: <Widget>[
+        for (var i = 0; i < 4; i++)
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            padding: const EdgeInsets.all(13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: line,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const Spacer(),
+                Container(width: 72, height: 12, color: line),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ThreadSkeleton extends StatelessWidget {
+  const _ThreadSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final line = theme.colorScheme.surfaceContainerHighest;
+    return Column(
+      children: <Widget>[
+        for (var i = 0; i < 2; i++)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(width: 120, height: 12, color: line),
+                const SizedBox(height: 12),
+                Container(width: double.infinity, height: 14, color: line),
+                const SizedBox(height: 8),
+                Container(width: 210, height: 10, color: line),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }

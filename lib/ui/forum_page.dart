@@ -31,6 +31,7 @@ class _ForumPageState extends State<ForumPage> {
   int _sort = 0;
   bool _loading = false;
   bool _hasMore = true;
+  bool? _accountFollowed;
   String? _error;
 
   @override
@@ -79,6 +80,17 @@ class _ForumPageState extends State<ForumPage> {
         _hasMore = data.hasMore;
         _page += 1;
       });
+      final fid = data.forum?.id ?? 0;
+      if (Session.instance.isLoggedIn && fid > 0) {
+        () async {
+          try {
+            final followed = await TiebaApi.instance.isForumFollowed(fid);
+            if (mounted) setState(() => _accountFollowed = followed);
+          } catch (_) {
+            // Keep the unknown state; the follow button still works.
+          }
+        }();
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());
@@ -88,8 +100,10 @@ class _ForumPageState extends State<ForumPage> {
   }
 
   Future<void> _toggleFollow() async {
-    final currently = LocalLibrary.instance.isForumFollowed(widget.forumName);
     final loggedIn = Session.instance.isLoggedIn;
+    final currently = loggedIn
+        ? (_accountFollowed ?? false)
+        : LocalLibrary.instance.isForumFollowed(widget.forumName);
     if (loggedIn) {
       try {
         await TiebaApi.instance.followForum(
@@ -105,11 +119,14 @@ class _ForumPageState extends State<ForumPage> {
         return;
       }
     }
-    final followed = await LocalLibrary.instance.toggleForumFollow(
-      widget.forumName,
-    );
+    if (loggedIn) {
+      if (mounted) setState(() => _accountFollowed = !currently);
+    } else {
+      await LocalLibrary.instance.toggleForumFollow(widget.forumName);
+      if (mounted) setState(() {});
+    }
+    final followed = !currently;
     if (!mounted) return;
-    setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -155,11 +172,12 @@ class _ForumPageState extends State<ForumPage> {
       appBar: AppBar(
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: <Widget>[
-          IconButton(
-            tooltip: '签到',
-            onPressed: _signForum,
-            icon: const Icon(Icons.how_to_reg_outlined),
-          ),
+          if (Session.instance.isLoggedIn)
+            IconButton(
+              tooltip: '签到',
+              onPressed: _signForum,
+              icon: const Icon(Icons.how_to_reg_outlined),
+            ),
           IconButton(
             tooltip: '刷新',
             onPressed: () => _load(reset: true),
@@ -179,9 +197,9 @@ class _ForumPageState extends State<ForumPage> {
                 child: _ForumHeader(
                   forum: _forum,
                   fallbackName: widget.forumName,
-                  followed: LocalLibrary.instance.isForumFollowed(
-                    widget.forumName,
-                  ),
+                  followed: Session.instance.isLoggedIn
+                      ? (_accountFollowed ?? false)
+                      : LocalLibrary.instance.isForumFollowed(widget.forumName),
                   onFollow: _toggleFollow,
                 ),
               ),

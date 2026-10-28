@@ -25,8 +25,11 @@ class _MainShellState extends State<MainShell> {
       body: IndexedStack(
         index: _index,
         children: <Widget>[
-          HomePage(loadFeed: widget.loadFeed),
-          const DiscoverPage(),
+          HomePage(
+            loadFeed: widget.loadFeed,
+            onExplore: () => setState(() => _index = 1),
+          ),
+          DiscoverPage(loadFeed: widget.loadFeed),
           KeyedSubtree(
             key: ValueKey<String>('notifications-$_epoch'),
             child: const NotificationsPage(),
@@ -46,14 +49,14 @@ class _MainShellState extends State<MainShell> {
         }),
         destinations: const <NavigationDestination>[
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: '首页',
+            icon: Icon(Icons.people_outline_rounded),
+            selectedIcon: Icon(Icons.people_rounded),
+            label: '关注',
           ),
           NavigationDestination(
             icon: Icon(Icons.explore_outlined),
             selectedIcon: Icon(Icons.explore_rounded),
-            label: '发现',
+            label: '广场',
           ),
           NavigationDestination(
             icon: Icon(Icons.notifications_none_rounded),

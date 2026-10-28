@@ -2,7 +2,7 @@
 
 > 目标：把 Feiba 从“能用”提升为“愿意每天打开”的贴吧客户端界面。
 > 参考：TiebaLite 4.x 的信息层级、底部导航、信息流卡片和帖子详情结构。
-> 实现：Flutter / Material 3。首页/吧页/帖子页使用 `lib/data/protocol_browse_repository.dart` 的协议层 `getThreads` / `getPosts` / `getComments`；搜索使用 `fetchSearchGlobal`，登录校验使用 `fetchLogin`，账号动作通过 `lib/core/tieba_api.dart`。
+> 实现：Flutter / Material 3。关注/广场使用 `TabBar` + `TabBarView` 横向分页；吧页/帖子页使用 `lib/data/protocol_browse_repository.dart` 的协议层 `getThreads` / `getPosts` / `getComments`；搜索使用 `fetchSearchGlobal`，登录校验使用 `fetchLogin`，账号动作通过 `lib/core/tieba_api.dart`。
 
 ## 1. 参考与素材边界
 
@@ -47,24 +47,37 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 底部四栏导航（`MainShell`）：
 
-1. **首页**：搜索入口、常逛吧、热门讨论信息流、兴趣分类；
-2. **发现**：按兴趣浏览、热门吧列表、搜索入口；
+1. **关注**：顶部 `SearchBar` + 横向四页 `TabBarView`：动态 / 吧 / 吧友 / 看过；
+2. **广场**：横向四页 `TabBarView`：话题 / 推荐 / 热吧 / 热帖；
 3. **消息**：登录后从协议层拉取回复/@；游客看到登录引导与使用说明；
 4. **我的**：账号资料、统计、关注/历史/收藏、外观、缓存、关于与开源许可。
 
-首页/发现/消息/我的使用 `IndexedStack` 保持状态；登录相关页面在切换 tab 时刷新。
+关注/广场/消息/我的使用 `IndexedStack` 保持状态；登录相关页面在切换 tab 时刷新。
+关注和广场不再是一条超长滚动页，而是用横向分页把“动态、吧、吧友、看过”和
+“热榜、推荐、热帖”分开；每个分页内部只负责一类内容，避免用户为了看某一类一直滑。
 桌面端暂沿用同一套底部导航，后续可为宽屏切换 NavigationRail。
 
 ## 4. 页面设计
 
-### 首页（HomePage）
+### 关注（HomePage）
 
-- 顶部：品牌标题“贴吧”+ 一句副标题 + 圆形账号入口；
-- 搜索条：浅蓝色块，点击进入搜索页；
-- 常逛的吧：横向卡片，圆形兴趣图标 + 吧名 + 分类；
-- 热门讨论：来自原神吧的真实信息流，使用 `ThreadCard`；
-- 探索更多：兴趣 chips；
-- 下拉刷新、加载骨架、错误卡片、空态。
+- 顶部：标题 + 副标题 + 搜索图标 + 账号入口；搜索框只在搜索页出现，避免占首页空间；
+- 四个横向分页（`TabBar` / `TabBarView`）：
+  - **动态**：关注的吧最新帖子汇总，按真实时间排序；使用 `ThreadCard`；
+  - **吧**：账号关注贴吧（`fetchSelfFollowForums`）或本地关注；`GridView` 展示成员数、等级、签到状态；
+  - **吧友**：登录后展示 `fetchFollows` 返回的关注用户；点击进入 `UserPage`，主页数据来自 `fetchHomepage`；
+  - **看过**：`LocalLibrary.recentForums` 派生的本地浏览记录；
+- 登录与未登录状态分别展示真实数据/登录引导，不使用示例吧或假帖子填充。
+
+### 广场（DiscoverPage）
+
+- 顶部：标题 + 副标题 + 搜索图标 + 刷新；
+- 四个横向分页：
+  - **话题**：`hotTopics` 读取 `/mo/q/hotMessage/list?fr=newwise`，展示真实排名、讨论数、话题图和描述；
+  - **推荐**：按已验证的分类读取 `fetchSquareForums`，分类包括游戏/动漫/数码/体育/摄影/旅游/娱乐；空分类不伪造结果；
+  - **热吧**：`fetchSquareForums(cname: '热门')` 的真实热门吧列表，带成员数；
+  - **热帖**：取热吧前 3 个吧的 `fetchThreads(sort=hot)`，去重后按回复数排序；
+- 所有计数均来自接口返回；缺失时隐藏计数而不是写死。
 
 ### 吧页（ForumPage）
 
@@ -135,9 +148,23 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 
 ## 7. 数据边界
 
-首页信息流、吧页帖子列表和帖子页楼层/楼中楼已切换到
+关注动态、吧页帖子列表和帖子页楼层/楼中楼已切换到
 `lib/data/protocol_browse_repository.dart`，底层是协议层的
 `fetchThreads` / `fetchPosts` / `fetchComments`。
+
+### 首页/广场 API 能力矩阵
+
+| 功能 | 真实数据来源 | 说明 |
+| --- | --- | --- |
+| 关注贴吧 | `fetchSelfFollowForums` | 登录后；游客使用 `LocalLibrary` 本地关注 |
+| 关注的人 | `fetchFollows` + `fetchHomepage` | 登录后；点击进入 `UserPage` |
+| 推荐 | `fetchSquareForums(cname: ...)` | 吧广场分类推荐；不是个性化推荐流 |
+| 话题榜 | `hotTopics` → `/mo/q/hotMessage/list?fr=newwise` | 真实话题排名、讨论数和话题图；点击后用话题名进入搜索 |
+| 热吧 | `fetchSquareForums(cname: '热门')` | 吧广场热门分类，真实热门吧 |
+| 热帖 | `fetchThreads(sort: hot)` | 取热吧前 3 个吧的热帖合并，不是官方全站热帖接口 |
+| 看过的吧 | `LocalLibrary.recentForums` | 本地浏览历史派生；没有服务端接口 |
+
+没有官方“首页个性化推荐流”接口，因此不伪造推荐内容；推荐仅限吧广场分类推荐。
 
 搜索同时使用协议吧搜索和 `fetchSearchGlobal`，登录校验使用 `fetchLogin`；账号动作通过
 `lib/core/tieba_api.dart` 调协议层。旧 JSON 端点只保留在工具和兼容代码中。
