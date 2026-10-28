@@ -7,7 +7,7 @@ import '../protocol/models/search.dart';
 import 'format.dart';
 import 'forum_page.dart';
 import 'thread_page.dart';
-import 'route_transitions.dart';
+import 'widgets/thread_open_container.dart';
 import 'widgets/dismissible_sheet.dart';
 import 'widgets/forum_chip.dart';
 import 'widgets/loading_indicator.dart';
@@ -82,19 +82,6 @@ class _SearchPageState extends State<SearchPage> {
           ? failure.toString()
           : null;
     });
-  }
-
-  void _openThread(SearchGlobal item) {
-    Navigator.of(context).push(
-      threadPageRoute(
-        ThreadPage(
-          tid: item.tid,
-          title: item.title,
-          forumName: item.forumName,
-          authorName: item.authorShowName,
-        ),
-      ),
-    );
   }
 
   void _openForum(String name) {
@@ -398,12 +385,20 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final item = _results[index];
-                    return _SearchResultCard(
-                      key: ValueKey<int>(item.tid),
-                      item: item,
-                      repo: _repo,
-                      onTap: () => _openThread(item),
-                      onForumTap: () => _openForum(item.forumName),
+                    return ThreadOpenContainer(
+                      closedRadius: 16,
+                      closedBuilder: (context, open) => _SearchResultCard(
+                        key: ValueKey<int>(item.tid),
+                        item: item,
+                        repo: _repo,
+                        onTap: open,
+                      ),
+                      openBuilder: (context) => ThreadPage(
+                        tid: item.tid,
+                        title: item.title,
+                        forumName: item.forumName,
+                        authorName: item.authorShowName,
+                      ),
                     );
                   }, childCount: _results.length),
                 ),
@@ -513,13 +508,11 @@ class _SearchResultCard extends StatefulWidget {
     required this.item,
     required this.repo,
     required this.onTap,
-    required this.onForumTap,
   });
 
   final SearchGlobal item;
   final ProtocolBrowseRepository repo;
   final VoidCallback onTap;
-  final VoidCallback onForumTap;
 
   @override
   State<_SearchResultCard> createState() => _SearchResultCardState();
@@ -585,11 +578,10 @@ class _SearchResultCardState extends State<_SearchResultCard> {
                       children: <Widget>[
                         if (item.forumName.isNotEmpty)
                           Flexible(
-                            child: ForumChip(
+                            child: ForumChipOpenContainer(
                               name: item.forumName,
                               repo: widget.repo,
                               dense: true,
-                              onPressed: widget.onForumTap,
                             ),
                           ),
                         const SizedBox(width: 8),

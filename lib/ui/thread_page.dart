@@ -9,7 +9,6 @@ import '../data/models/tieba_user.dart';
 import '../data/protocol_browse_repository.dart';
 import 'auth_gate.dart';
 import 'format.dart';
-import 'route_transitions.dart';
 import 'widgets/content_view.dart';
 import 'widgets/dismissible_sheet.dart';
 import 'widgets/name_avatar.dart';
@@ -205,16 +204,10 @@ class _ThreadPageState extends State<ThreadPage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Hero(
-          tag: threadTitleHeroTag(widget.tid),
-          child: Material(
-            type: MaterialType.transparency,
-            child: Text(
-              _title.isEmpty ? '帖子' : _title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+        title: Text(
+          _title.isEmpty ? '帖子' : _title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         actions: <Widget>[
           IconButton(

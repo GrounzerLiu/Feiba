@@ -1,13 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../data/models/forum_page.dart';
 import '../data/models/feed.dart';
 import '../data/models/user_page.dart';
 import '../data/protocol_browse_repository.dart';
 import 'format.dart';
-import 'forum_page.dart';
-import 'thread_page.dart';
-import 'route_transitions.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/name_avatar.dart';
 import 'widgets/thread_grid.dart';
@@ -51,26 +47,6 @@ class _UserPageState extends State<UserPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  void _openThread(ThreadSummary thread) {
-    final user = _data?.users[thread.authorId];
-    Navigator.of(context).push(
-      threadPageRoute(
-        ThreadPage(
-          tid: thread.tid,
-          title: thread.title,
-          forumName: thread.forumName,
-          authorName: user?.displayName ?? _data?.profile?.displayName,
-        ),
-      ),
-    );
-  }
-
-  void _openForum(String name) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)),
-    );
   }
 
   @override
@@ -167,8 +143,6 @@ class _UserPageState extends State<UserPage> {
                         users: _data!.users,
                       ),
                       repo: _repo,
-                      onThreadTap: _openThread,
-                      onForumTap: _openForum,
                     ),
                   ),
                 ),

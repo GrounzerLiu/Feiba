@@ -12,8 +12,6 @@ import 'discover_page.dart';
 import 'forum_page.dart';
 import 'login_page.dart';
 import 'search_page.dart';
-import 'thread_page.dart';
-import 'route_transitions.dart';
 import 'user_page.dart';
 import 'widgets/forum_chip.dart';
 import 'widgets/forum_follow_card.dart';
@@ -217,20 +215,6 @@ class _HomePageState extends State<HomePage>
     ),
   );
 
-  void _openThread(ThreadSummary thread) {
-    final author = _feed.users[thread.authorId];
-    Navigator.of(context).push(
-      threadPageRoute(
-        ThreadPage(
-          tid: thread.tid,
-          title: thread.title,
-          forumName: thread.forumName,
-          authorName: author?.displayName,
-        ),
-      ),
-    );
-  }
-
   Future<void> _openAccount() async {
     await Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => const LoginPage()));
@@ -370,8 +354,6 @@ class _HomePageState extends State<HomePage>
             ThreadGrid(
               feed: _feed,
               repo: _repo,
-              onThreadTap: _openThread,
-              onForumTap: _openForum,
             ),
           ],
         ],
@@ -403,10 +385,9 @@ class _HomePageState extends State<HomePage>
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final name = _recentForums[index];
-                  return ForumChip(
+                  return ForumChipOpenContainer(
                     name: name,
                     repo: _repo,
-                    onPressed: () => _openForum(name),
                   );
                 },
               ),

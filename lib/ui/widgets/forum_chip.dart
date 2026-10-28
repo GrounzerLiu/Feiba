@@ -1,7 +1,9 @@
+import 'package:animations/animations.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/local_library.dart';
 import '../../data/protocol_browse_repository.dart';
+import '../forum_page.dart';
 import 'forum_avatar.dart';
 
 /// Material 3 action chip for a forum, with a lazily loaded avatar.
@@ -56,6 +58,42 @@ class ForumChip extends StatelessWidget {
       backgroundColor: theme.colorScheme.surfaceContainerLow,
       side: BorderSide(color: theme.colorScheme.outlineVariant),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+    );
+  }
+}
+/// Expands a small forum chip into the forum page with a container transform.
+class ForumChipOpenContainer extends StatelessWidget {
+  const ForumChipOpenContainer({
+    super.key,
+    required this.name,
+    required this.repo,
+    this.dense = false,
+  });
+
+  final String name;
+  final ProtocolBrowseRepository repo;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return OpenContainer(
+      transitionDuration: const Duration(milliseconds: 300),
+      transitionType: ContainerTransitionType.fadeThrough,
+      closedColor: theme.colorScheme.surfaceContainerLow,
+      openColor: theme.scaffoldBackgroundColor,
+      middleColor: theme.scaffoldBackgroundColor,
+      closedElevation: 0,
+      openElevation: 0,
+      closedShape: const StadiumBorder(),
+      openShape: const RoundedRectangleBorder(),
+      closedBuilder: (context, open) => ForumChip(
+        name: name,
+        repo: repo,
+        dense: dense,
+        onPressed: open,
+      ),
+      openBuilder: (context, _) => ForumPage(forumName: name),
     );
   }
 }

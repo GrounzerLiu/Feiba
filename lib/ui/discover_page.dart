@@ -12,8 +12,6 @@ import '../data/protocol_browse_repository.dart';
 import 'format.dart';
 import 'forum_page.dart';
 import 'search_page.dart';
-import 'thread_page.dart';
-import 'route_transitions.dart';
 import 'widgets/forum_avatar.dart';
 import 'widgets/morphing_shape.dart';
 import 'widgets/thread_grid.dart';
@@ -153,20 +151,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
   void _openForum(String name) => Navigator.of(
     context,
   ).push(MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)));
-
-  void _openThread(ThreadSummary thread) {
-    final author = _hotFeed.users[thread.authorId];
-    Navigator.of(context).push(
-      threadPageRoute(
-        ThreadPage(
-          tid: thread.tid,
-          title: thread.title,
-          forumName: thread.forumName,
-          authorName: author?.displayName,
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -421,8 +405,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ThreadGrid(
               feed: _hotFeed,
               repo: _repo,
-              onThreadTap: _openThread,
-              onForumTap: _openForum,
             ),
         ],
       ),

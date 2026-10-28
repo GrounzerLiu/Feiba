@@ -46,7 +46,7 @@
 
 - 项目：https://pub.dev/packages/animations
 - 许可证：BSD-3-Clause（Flutter 官方 Material motion 示例包）
-- 使用方式：帖子详情的 Shared Axis 共享元素转场。
+- 使用方式：帖子详情的 OpenContainer 卡片展开动画，以及非卡片入口的 Shared Axis 转场。
 
 ## Dart / Flutter 依赖
 

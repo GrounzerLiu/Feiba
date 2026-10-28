@@ -8,7 +8,7 @@ import '../data/protocol_browse_repository.dart';
 import 'auth_gate.dart';
 import 'format.dart';
 import 'thread_page.dart';
-import 'route_transitions.dart';
+import 'widgets/thread_open_container.dart';
 import 'widgets/loading_indicator.dart';
 import 'widgets/name_avatar.dart';
 import 'widgets/thread_card.dart';
@@ -259,20 +259,19 @@ class _ForumPageState extends State<ForumPage> {
                   final user = _users[thread.authorId];
                   return Padding(
                     padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-                    child: ThreadCard(
-                      thread: thread,
-                      authorName: user?.displayName as String?,
-                      authorAvatar: user?.avatarUrl as String?,
-                      forumName: title,
-                      onTap: () => Navigator.of(context).push(
-                        threadPageRoute(
-                          ThreadPage(
-                            tid: thread.tid,
-                            title: thread.title,
-                            forumName: title,
-                            authorName: user?.displayName as String?,
-                          ),
-                        ),
+                    child: ThreadOpenContainer(
+                      closedBuilder: (context, open) => ThreadCard(
+                        thread: thread,
+                        authorName: user?.displayName as String?,
+                        authorAvatar: user?.avatarUrl as String?,
+                        forumName: title,
+                        onTap: open,
+                      ),
+                      openBuilder: (context) => ThreadPage(
+                        tid: thread.tid,
+                        title: thread.title,
+                        forumName: title,
+                        authorName: user?.displayName as String?,
                       ),
                     ),
                   );

@@ -9,7 +9,6 @@ import '../../data/models/content_node.dart';
 import '../../data/models/forum_page.dart';
 import '../../data/protocol_browse_repository.dart';
 import '../format.dart';
-import '../route_transitions.dart';
 import 'forum_chip.dart';
 import 'name_avatar.dart';
 
@@ -23,7 +22,6 @@ class ThreadCard extends StatelessWidget {
     this.onTap,
     this.forumRepo,
     this.showForumChip = false,
-    this.onForumTap,
   });
 
   final ThreadSummary thread;
@@ -33,7 +31,6 @@ class ThreadCard extends StatelessWidget {
   final VoidCallback? onTap;
   final ProtocolBrowseRepository? forumRepo;
   final bool showForumChip;
-  final VoidCallback? onForumTap;
 
   @override
   Widget build(BuildContext context) {
@@ -97,20 +94,14 @@ class ThreadCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 7),
               ],
-              Hero(
-                tag: threadTitleHeroTag(thread.tid),
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: Text(
-                    thread.title.isEmpty ? '无标题' : thread.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w700,
-                      height: 1.35,
-                    ),
-                  ),
+              Text(
+                thread.title.isEmpty ? '无标题' : thread.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
                 ),
               ),
               if (preview.isNotEmpty) ...<Widget>[
@@ -139,11 +130,10 @@ class ThreadCard extends StatelessWidget {
                               forumRepo != null &&
                               forumName != null &&
                               forumName!.isNotEmpty
-                          ? ForumChip(
+                          ? ForumChipOpenContainer(
                               name: forumName!,
                               repo: forumRepo!,
                               dense: true,
-                              onPressed: onForumTap,
                             )
                           : Row(
                               mainAxisSize: MainAxisSize.min,

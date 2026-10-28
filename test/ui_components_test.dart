@@ -4,11 +4,33 @@ import 'package:feiba/ui/theme.dart';
 import 'package:feiba/ui/widgets/morphing_shape.dart';
 import 'package:feiba/ui/widgets/name_avatar.dart';
 import 'package:feiba/ui/widgets/forum_follow_card.dart';
+import 'package:feiba/ui/widgets/thread_open_container.dart';
 import 'package:feiba/ui/widgets/thread_card.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('thread open container expands the closed card', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ThreadOpenContainer(
+            closedBuilder: (context, open) => TextButton(
+              onPressed: open,
+              child: const Text('打开卡片'),
+            ),
+            openBuilder: (context) => const Scaffold(body: Text('详情')),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('打开卡片'));
+    await tester.pumpAndSettle();
+    expect(find.text('详情'), findsOneWidget);
+  });
+
   test('forum level colors cover the level ranges', () {
     expect(
       ForumFollowCard.levelColor(1),
