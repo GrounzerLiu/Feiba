@@ -24,6 +24,34 @@ void main() {
     expect(find.text('我的'), findsOneWidget);
   });
 
+  testWidgets('adaptive shell switches between bottom bar and rail', (
+    WidgetTester tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(Brightness.light),
+        home: const MainShell(loadFeed: false),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(Brightness.light),
+        home: const MainShell(loadFeed: false),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+  });
+
   testWidgets('square tab exposes real-data sections', (
     WidgetTester tester,
   ) async {

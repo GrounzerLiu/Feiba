@@ -338,18 +338,21 @@ class _SearchPageState extends State<SearchPage> {
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
-                sliver: SliverGrid.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 2.55,
-                  children: <Widget>[
-                    for (final forum in _forums.take(6))
-                      _ForumResultCard(
-                        forum: forum,
-                        onTap: () => _openForum(forum.name),
+                sliver: SliverGrid(
+                  gridDelegate:
+                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 300,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 2.55,
                       ),
-                  ],
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final forum = _forums[index];
+                    return _ForumResultCard(
+                      forum: forum,
+                      onTap: () => _openForum(forum.name),
+                    );
+                  }, childCount: _forums.take(6).length),
                 ),
               ),
               if (_forums.length > 6)

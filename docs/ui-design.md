@@ -232,3 +232,13 @@ Flutter 3.47 起 Material 组件由官方 `material_ui` 包提供。项目已通
 
 完整 M3E 的 ButtonGroup、SplitButton、FAB Menu、LoadingIndicator、Wavy Slider、
 ExpressiveSheet 等官方尚未提供，项目没有用第三方实现冒充。
+## 自适应布局
+
+按 Material 3 窗口尺寸类实现：
+
+- compact（< 600dp）：底部 NavigationBar，内容占满宽度；
+- medium（600–1199dp）：左侧 NavigationRail；
+- expanded（>= 1200dp）：左侧 extended NavigationRail，显示图标和文字；
+- 页面主体最大宽度 1200dp，宽屏下居中；吧列表、推荐吧和搜索吧结果使用最大列宽 300dp 的自适应网格。
+
+断点和最大宽度集中在 lib/ui/main_shell.dart；NavigationRail 与 NavigationBar 共享同一组目的地和选中状态。

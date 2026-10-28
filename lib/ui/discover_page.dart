@@ -377,8 +377,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 300,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
               childAspectRatio: 1.6,
