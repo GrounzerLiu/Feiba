@@ -227,7 +227,8 @@ Flutter 3.47 起 Material 组件由官方 `material_ui` 包提供。项目已通
   形变；
 - `IconButtonThemeData(variant: StyleVariant.material3Expressive)`：官方 Expressive
   IconButton 尺寸、宽度和形状；
-- `FadeForwardsPageTransitionsBuilder`：页面转场；
+- `FadeForwardsPageTransitionsBuilder`：普通页面转场；
+- `SharedAxisTransition` + Hero：帖子详情页和卡片标题的共享元素转场；
 - 其余仍是 Material 3 基础组件。
 
 完整 M3E 的 ButtonGroup、SplitButton、FAB Menu、LoadingIndicator、Wavy Slider、
@@ -247,4 +248,4 @@ ExpressiveSheet 等官方尚未提供，项目没有用第三方实现冒充。
 - 首页默认打开“吧”页；看过的吧以横向 ForumChip 显示在关注的吧上方，按最近点击时间倒序，不单独占用一个 tab。
 - ForumChip 使用 Material 3 ActionChip，带头像和名字；点击时写入 LocalLibrary 的访问时间。
 - 吧内帖子保持列表；吧外的帖子使用 ThreadGrid，按可用宽度 1–4 列排列，并在卡片底部显示可点击的吧 chip。
-- 帖子详情使用 Fade + Slide 的 PageRouteBuilder 转场。
+- 帖子详情使用官方 `animations` 包的 Shared Axis Horizontal 转场，并用 Hero 将卡片标题共享到详情页 AppBar。

@@ -1,6 +1,9 @@
 import 'package:animations/animations.dart';
 import 'package:material_ui/material_ui.dart';
 
+/// Shared-element tag used by the thread card title and the detail app bar.
+String threadTitleHeroTag(int tid) => 'thread-title-$tid';
+
 /// Material 3 shared-axis transition used when opening a thread detail page.
 Route<T> threadPageRoute<T>(Widget page) {
   return PageRouteBuilder<T>(

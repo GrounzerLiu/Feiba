@@ -42,6 +42,12 @@
 - 许可证：MIT
 - 使用方式：吧外帖子的瀑布流卡片布局。
 
+## animations
+
+- 项目：https://pub.dev/packages/animations
+- 许可证：BSD-3-Clause（Flutter 官方 Material motion 示例包）
+- 使用方式：帖子详情的 Shared Axis 共享元素转场。
+
 ## Dart / Flutter 依赖
 
 见 pubspec.yaml，各自遵循其 pub.dev 许可证。

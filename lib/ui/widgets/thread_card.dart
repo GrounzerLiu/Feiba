@@ -9,6 +9,7 @@ import '../../data/models/content_node.dart';
 import '../../data/models/forum_page.dart';
 import '../../data/protocol_browse_repository.dart';
 import '../format.dart';
+import '../route_transitions.dart';
 import 'forum_chip.dart';
 import 'name_avatar.dart';
 
@@ -96,14 +97,20 @@ class ThreadCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 7),
               ],
-              Text(
-                thread.title.isEmpty ? '无标题' : thread.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35,
+              Hero(
+                tag: threadTitleHeroTag(thread.tid),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Text(
+                    thread.title.isEmpty ? '无标题' : thread.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                    ),
+                  ),
                 ),
               ),
               if (preview.isNotEmpty) ...<Widget>[
