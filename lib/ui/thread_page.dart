@@ -117,19 +117,25 @@ class _ThreadPageState extends State<ThreadPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => FractionallySizedBox(
-        // Keep small subpost lists compact; long lists get the usual drawer.
-        heightFactor: post.subPostNumber <= 3
+      builder: (_) => DraggableScrollableSheet(
+        // Keep small subpost lists compact; scrolling can expand the sheet
+        // all the way to full screen for long discussions.
+        initialChildSize: post.subPostNumber <= 3
             ? 0.38
             : post.subPostNumber <= 10
             ? 0.58
             : 0.78,
-        child: _SubPostsSheet(
+        minChildSize: 0.3,
+        maxChildSize: 1,
+        expand: false,
+        snap: true,
+        builder: (context, scrollController) => _SubPostsSheet(
           tid: widget.tid,
           pid: post.id,
           total: post.subPostNumber,
           initial: post.subPosts,
           users: _users,
+          scrollController: scrollController,
         ),
       ),
     );
@@ -576,6 +582,7 @@ class _SubPostsSheet extends StatefulWidget {
     required this.total,
     required this.initial,
     required this.users,
+    required this.scrollController,
   });
 
   final int tid;
@@ -583,6 +590,7 @@ class _SubPostsSheet extends StatefulWidget {
   final int total;
   final List<SubPost> initial;
   final Map<int, TiebaUser> users;
+  final ScrollController scrollController;
 
   @override
   State<_SubPostsSheet> createState() => _SubPostsSheetState();
@@ -677,6 +685,7 @@ class _SubPostsSheetState extends State<_SubPostsSheet> {
                   ),
                 )
               : ListView.separated(
+                  controller: widget.scrollController,
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                   itemCount: _items.length + 1,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),

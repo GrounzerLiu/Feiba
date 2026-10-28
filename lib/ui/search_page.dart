@@ -116,41 +116,72 @@ class _SearchPageState extends State<SearchPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      showDragHandle: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         final theme = Theme.of(sheetContext);
-        return FractionallySizedBox(
-          heightFactor: 0.78,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                child: Text(
-                  '相关贴吧 ${_forums.length}',
-                  style: theme.textTheme.titleMedium,
+        return DraggableScrollableSheet(
+          initialChildSize: 0.72,
+          minChildSize: 0.42,
+          maxChildSize: 1,
+          expand: false,
+          snap: true,
+          builder: (context, scrollController) => Material(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const SizedBox(height: 10),
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.35,
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-                  itemCount: _forums.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final forum = _forums[index];
-                    return _ForumSearchTile(
-                      forum: forum,
-                      onTap: () {
-                        Navigator.of(sheetContext).pop();
-                        _openForum(forum.name);
-                      },
-                    );
-                  },
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+                  child: Row(
+                    children: <Widget>[
+                      Text(
+                        '相关贴吧 ${_forums.length}',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                    itemCount: _forums.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final forum = _forums[index];
+                      return _ForumSearchTile(
+                        forum: forum,
+                        onTap: () {
+                          Navigator.of(sheetContext).pop();
+                          _openForum(forum.name);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -383,7 +414,9 @@ class _SearchPageState extends State<SearchPage> {
                   itemBuilder: (context, index) {
                     final item = _results[index];
                     return _SearchResultCard(
+                      key: ValueKey<int>(item.tid),
                       item: item,
+                      repo: _repo,
                       onTap: () => _openThread(item),
                     );
                   },
@@ -488,14 +521,30 @@ class _ForumSearchTile extends StatelessWidget {
   }
 }
 
-class _SearchResultCard extends StatelessWidget {
-  const _SearchResultCard({required this.item, required this.onTap});
+class _SearchResultCard extends StatefulWidget {
+  const _SearchResultCard({
+    super.key,
+    required this.item,
+    required this.repo,
+    required this.onTap,
+  });
 
   final SearchGlobal item;
+  final ProtocolBrowseRepository repo;
   final VoidCallback onTap;
 
   @override
+  State<_SearchResultCard> createState() => _SearchResultCardState();
+}
+
+class _SearchResultCardState extends State<_SearchResultCard> {
+  late final Future<String?> _avatar = widget.repo.forumAvatar(
+    widget.item.forumName,
+  );
+
+  @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final theme = Theme.of(context);
     final title = item.title.trim().isEmpty ? item.content : item.title;
     final snippet = item.content.trim();
@@ -504,15 +553,19 @@ class _SearchResultCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              NameAvatar(
-                name: item.forumName.isEmpty ? '吧' : item.forumName,
-                size: 42,
+              FutureBuilder<String?>(
+                future: _avatar,
+                builder: (context, snapshot) => NameAvatar(
+                  name: item.forumName.isEmpty ? '吧' : item.forumName,
+                  imageUrl: snapshot.data,
+                  size: 42,
+                ),
               ),
               const SizedBox(width: 11),
               Expanded(

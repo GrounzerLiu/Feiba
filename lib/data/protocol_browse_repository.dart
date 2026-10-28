@@ -27,6 +27,8 @@ class ProtocolBrowseRepository {
   ProtocolBrowseRepository();
 
   TiebaHttpCore? _http;
+  final Map<String, Future<String?>> _forumAvatarFutures =
+      <String, Future<String?>>{};
 
   static List<dynamic> _list(dynamic value) =>
       value is List ? value : const <dynamic>[];
@@ -75,6 +77,20 @@ class ProtocolBrowseRepository {
       totalPage: page.page.totalPage,
       hasMore: page.hasMore,
     );
+  }
+
+  /// Resolves a forum avatar lazily; repeated cards share one request.
+  Future<String?> forumAvatar(String name) {
+    final key = name.trim();
+    if (key.isEmpty) return Future<String?>.value();
+    return _forumAvatarFutures.putIfAbsent(key, () async {
+      try {
+        final forum = await fetchForum(_core, key);
+        return forum.avatarUrl?.replaceFirst('http://', 'https://');
+      } catch (_) {
+        return null;
+      }
+    });
   }
 
   Future<List<ForumSearchResult>> searchForums(String keyword) async {
