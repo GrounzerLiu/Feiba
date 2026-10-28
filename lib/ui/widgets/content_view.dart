@@ -1,4 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../../core/image_cache.dart';
 
 import '../../data/models/content_node.dart';
 import '../photo_view_page.dart';
@@ -75,11 +78,13 @@ class ContentView extends StatelessWidget {
               alignment: PlaceholderAlignment.middle,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 1),
-                child: Image.network(
-                  url,
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  cacheManager: FeibaImageCache.managerFor(url),
                   width: 22,
                   height: 22,
-                  errorBuilder: (_, _, _) => Text(node.text, style: baseStyle),
+                  fadeInDuration: const Duration(milliseconds: 80),
+                  errorWidget: (_, _, _) => Text(node.text, style: baseStyle),
                 ),
               ),
             ),
@@ -210,10 +215,14 @@ class _ImageGrid extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              Image.network(
-                url,
+              CachedNetworkImage(
+                imageUrl: url,
+                cacheManager: FeibaImageCache.managerFor(url),
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
+                fadeInDuration: const Duration(milliseconds: 120),
+                placeholder: (_, _) =>
+                    Container(color: theme.colorScheme.surfaceContainerHighest),
+                errorWidget: (_, _, _) => Container(
                   color: theme.colorScheme.surfaceContainerHighest,
                   child: Icon(
                     Icons.broken_image_outlined,

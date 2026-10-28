@@ -1,4 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../../core/image_cache.dart';
 
 class NameAvatar extends StatelessWidget {
   const NameAvatar({
@@ -56,12 +59,18 @@ class NameAvatar extends StatelessWidget {
     final url = imageUrl;
     final image = url == null || url.isEmpty
         ? null
-        : Image.network(
-            url,
+        : CachedNetworkImage(
+            imageUrl: url,
+            cacheManager: FeibaImageCache.managerFor(url),
             fit: BoxFit.cover,
             width: size,
             height: size,
-            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            memCacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                .round()
+                .clamp(1, 1024),
+            fadeInDuration: const Duration(milliseconds: 120),
+            placeholder: (_, _) => const SizedBox.shrink(),
+            errorWidget: (_, _, _) => const SizedBox.shrink(),
           );
     return Container(
       width: size,

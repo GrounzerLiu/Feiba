@@ -1,4 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../core/image_cache.dart';
+
 import 'package:flutter/services.dart';
 
 import '../core/image_saver.dart';
@@ -15,8 +19,9 @@ class PhotoViewPage extends StatefulWidget {
 }
 
 class _PhotoViewPageState extends State<PhotoViewPage> {
-  late final PageController _controller =
-      PageController(initialPage: widget.initialIndex);
+  late final PageController _controller = PageController(
+    initialPage: widget.initialIndex,
+  );
   late int _index = widget.initialIndex;
 
   @override
@@ -40,20 +45,21 @@ class _PhotoViewPageState extends State<PhotoViewPage> {
                 minScale: 1,
                 maxScale: 4,
                 child: Center(
-                  child: Image.network(
-                    widget.urls[index],
+                  child: CachedNetworkImage(
+                    imageUrl: widget.urls[index],
+                    cacheManager: FeibaImageCache.managerFor(
+                      widget.urls[index],
+                    ),
                     fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
+                    fadeInDuration: const Duration(milliseconds: 120),
+                    placeholder: (_, _) => const Center(
+                      child: CircularProgressIndicator(color: Colors.white70),
+                    ),
+                    errorWidget: (_, _, _) => const Icon(
                       Icons.broken_image_outlined,
                       color: Colors.white54,
                       size: 48,
                     ),
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return const Center(
-                        child: CircularProgressIndicator(color: Colors.white70),
-                      );
-                    },
                   ),
                 ),
               );
@@ -99,9 +105,8 @@ class _PhotoViewPageState extends State<PhotoViewPage> {
                       ClipboardData(text: widget.urls[_index]),
                     );
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已复制图片链接')),
-                    );
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(const SnackBar(content: Text('已复制图片链接')));
                   },
                   icon: const Icon(Icons.link, color: Colors.white),
                 ),

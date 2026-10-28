@@ -1,4 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../core/image_cache.dart';
 
 import '../data/models/feed.dart';
 import '../data/models/forum_page.dart';
@@ -512,12 +515,16 @@ class _HotTopicCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    image,
+                  child: CachedNetworkImage(
+                    imageUrl: image,
+                    cacheManager: FeibaImageCache.managerFor(image),
                     width: 62,
                     height: 62,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
+                    fadeInDuration: const Duration(milliseconds: 120),
+                    placeholder: (_, _) =>
+                        const SizedBox(width: 62, height: 62),
+                    errorWidget: (_, _, _) =>
                         const SizedBox(width: 62, height: 62),
                   ),
                 ),

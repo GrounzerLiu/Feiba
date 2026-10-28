@@ -1,4 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../../core/image_cache.dart';
 
 import '../../data/models/content_node.dart';
 import '../../data/models/forum_page.dart';
@@ -232,10 +235,17 @@ class _ImageStrip extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: <Widget>[
-                    Image.network(
-                      items[i],
+                    CachedNetworkImage(
+                      imageUrl: items[i],
+                      cacheManager: FeibaImageCache.managerFor(items[i]),
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
+                      fadeInDuration: const Duration(milliseconds: 120),
+                      placeholder: (_, _) => Container(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                      ),
+                      errorWidget: (_, _, _) => Container(
                         color: Theme.of(context)
                             .colorScheme
                             .surfaceContainerHighest,

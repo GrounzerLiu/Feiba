@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/image_cache.dart';
 import '../core/local_library.dart';
 import '../core/session.dart';
 import '../core/tieba_api.dart';
@@ -143,7 +144,7 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('清理图片缓存？'),
-        content: const Text('会释放已加载的图片内存，不会删除浏览记录和收藏。'),
+        content: const Text('会清理头像、帖子图片的磁盘和内存缓存，不会删除浏览记录和收藏。'),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -157,6 +158,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
     if (confirmed != true) return;
+    await FeibaImageCache.clear();
     PaintingBinding.instance.imageCache
       ..clear()
       ..clearLiveImages();

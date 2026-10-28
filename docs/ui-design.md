@@ -201,3 +201,14 @@ TiebaLite（HuanCheng65/TiebaLite）采用 **GPL-3.0** 许可证；Feiba 当前�
 - 协议层信息流通过 `tool/protocol_smoke.dart` 与真机页面联调；
 - 首页通过 `HomePage(loadFeed: false)` 支持无网络组件测试；
 - 组件测试不依赖真实贴吧接口。
+## 图片缓存
+
+图片使用 `cached_network_image` + `flutter_cache_manager`，
+Android/Windows 共用同一套磁盘缓存策略：
+
+- URL 带版本标记（`tbpicau`、`v`、`sign`）：按完整 URL 作为 key，缓存 3650 天；
+  URL 变化时自然产生新 key，不需要手动失效；
+- 无版本标记的 URL（例如部分头像）：7 天 TTL，到期后重新校验；
+- 上限：stable 400 个对象、versioned 600 个对象，超出后 LRU 淘汰；
+- “我的 → 清理图片缓存”会同时清理磁盘和 Flutter 内存图片缓存；
+- 只缓存图片，不缓存信息流、话题榜、关注列表等会频繁变化的数据。
