@@ -539,8 +539,14 @@ class _HotTopicCard extends StatelessWidget {
                     fadeInDuration: const Duration(milliseconds: 120),
                     placeholder: (_, _) =>
                         const SizedBox(width: 62, height: 62),
-                    errorWidget: (_, _, _) =>
-                        const SizedBox(width: 62, height: 62),
+                    errorWidget: (_, _, _) => Image.network(
+                      image,
+                      width: 62,
+                      height: 62,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          const SizedBox(width: 62, height: 62),
+                    ),
                   ),
                 ),
               ],

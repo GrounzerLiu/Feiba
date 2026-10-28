@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -237,7 +239,9 @@ class _ImageStrip extends StatelessWidget {
                   children: <Widget>[
                     CachedNetworkImage(
                       imageUrl: items[i],
-                      cacheManager: FeibaImageCache.managerFor(items[i]),
+                      cacheManager: Platform.isWindows
+                          ? null
+                          : FeibaImageCache.managerFor(items[i]),
                       fit: BoxFit.cover,
                       fadeInDuration: const Duration(milliseconds: 120),
                       placeholder: (_, _) => Container(
@@ -245,14 +249,20 @@ class _ImageStrip extends StatelessWidget {
                             .colorScheme
                             .surfaceContainerHighest,
                       ),
-                      errorWidget: (_, _, _) => Container(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      errorWidget: (_, _, _) => Image.network(
+                        items[i],
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            size: 20,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ),

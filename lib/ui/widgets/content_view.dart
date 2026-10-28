@@ -222,12 +222,16 @@ class _ImageGrid extends StatelessWidget {
                 fadeInDuration: const Duration(milliseconds: 120),
                 placeholder: (_, _) =>
                     Container(color: theme.colorScheme.surfaceContainerHighest),
-                errorWidget: (_, _, _) => Container(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.broken_image_outlined,
-                    size: 22,
-                    color: theme.colorScheme.onSurfaceVariant,
+                errorWidget: (_, _, _) => Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      size: 22,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),

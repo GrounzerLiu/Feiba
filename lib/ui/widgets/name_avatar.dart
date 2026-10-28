@@ -70,7 +70,13 @@ class NameAvatar extends StatelessWidget {
                 .clamp(1, 1024),
             fadeInDuration: const Duration(milliseconds: 120),
             placeholder: (_, _) => const SizedBox.shrink(),
-            errorWidget: (_, _, _) => const SizedBox.shrink(),
+            errorWidget: (_, _, _) => Image.network(
+              url,
+              fit: BoxFit.cover,
+              width: size,
+              height: size,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
           );
     return Container(
       width: size,

@@ -55,10 +55,14 @@ class _PhotoViewPageState extends State<PhotoViewPage> {
                     placeholder: (_, _) => const Center(
                       child: CircularProgressIndicator(color: Colors.white70),
                     ),
-                    errorWidget: (_, _, _) => const Icon(
-                      Icons.broken_image_outlined,
-                      color: Colors.white54,
-                      size: 48,
+                    errorWidget: (_, _, _) => Image.network(
+                      widget.urls[index],
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.white54,
+                        size: 48,
+                      ),
                     ),
                   ),
                 ),
