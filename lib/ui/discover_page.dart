@@ -13,6 +13,7 @@ import 'format.dart';
 import 'forum_page.dart';
 import 'search_page.dart';
 import 'widgets/forum_avatar.dart';
+import 'widgets/forum_open_container.dart';
 import 'widgets/morphing_shape.dart';
 import 'widgets/thread_grid.dart';
 import 'widgets/loading_indicator.dart';
@@ -308,11 +309,20 @@ class _DiscoverPageState extends State<DiscoverPage> {
             for (var i = 0; i < _hotForums.length; i++)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: _HotForumCard(
-                  rank: i + 1,
-                  repo: _repo,
-                  forum: _hotForums[i],
-                  onTap: () => _openForum(_hotForums[i].name),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    child: ForumOpenContainer(
+                      closedBuilder: (context, open) => _HotForumCard(
+                        rank: i + 1,
+                        repo: _repo,
+                        forum: _hotForums[i],
+                        onTap: open,
+                      ),
+                      openBuilder: (context) =>
+                          ForumPage(forumName: _hotForums[i].name),
+                    ),
+                  ),
                 ),
               ),
         ],

@@ -248,5 +248,6 @@ ExpressiveSheet 等官方尚未提供，项目没有用第三方实现冒充。
 
 - 首页默认打开“吧”页；看过的吧以横向 ForumChip 显示在关注的吧上方，按最近点击时间倒序，不单独占用一个 tab。
 - ForumChip 使用 Material 3 ActionChip，带头像和名字；点击时写入 LocalLibrary 的访问时间。
-- 吧内帖子保持列表；吧外的帖子使用 ThreadGrid，按可用宽度 1–4 列排列，并在卡片底部显示可点击的吧 chip。
-- 帖子卡片从当前位置展开为帖子详情页；吧 chip 从当前位置展开为吧页。两者都使用官方 `animations` 包的 OpenContainer 容器变换。
+- 吧内帖子使用 SliverMasonryGrid；吧外帖子使用 ThreadGrid，二者都按可用宽度 1–4 列排列；吧外卡片底部显示可点击的吧 chip。
+- 帖子卡片从当前位置展开为帖子详情页；热吧卡片展开为吧页；吧 chip 从当前位置展开为吧页。都使用官方 `animations` 包的 OpenContainer 容器变换。
+- 热吧保持排行单列，卡片最大宽度 760dp；图片网格的缩略图和全屏图片查看器使用 Hero 共享元素。

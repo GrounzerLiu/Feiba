@@ -1,3 +1,4 @@
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/local_library.dart';
@@ -188,12 +189,15 @@ class _ForumPageState extends State<ForumPage> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _load(reset: true),
-        child: CustomScrollView(
-          controller: _scroll,
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: <Widget>[
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = (constraints.maxWidth / 300).floor().clamp(1, 4);
+          return RefreshIndicator(
+            onRefresh: () => _load(reset: true),
+            child: CustomScrollView(
+              controller: _scroll,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: <Widget>[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
@@ -240,26 +244,17 @@ class _ForumPageState extends State<ForumPage> {
                     : const Center(child: Text('这个吧还没有帖子')),
               )
             else
-              SliverList.builder(
-                itemCount: _threads.length + (_hasMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index >= _threads.length) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      child: Center(
-                        child: SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.2),
-                        ),
-                      ),
-                    );
-                  }
-                  final thread = _threads[index];
-                  final user = _users[thread.authorId];
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-                    child: ThreadOpenContainer(
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
+                sliver: SliverMasonryGrid.count(
+                  crossAxisCount: columns,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childCount: _threads.length,
+                  itemBuilder: (context, index) {
+                    final thread = _threads[index];
+                    final user = _users[thread.authorId];
+                    return ThreadOpenContainer(
                       closedBuilder: (context, open) => ThreadCard(
                         thread: thread,
                         authorName: user?.displayName as String?,
@@ -273,13 +268,28 @@ class _ForumPageState extends State<ForumPage> {
                         forumName: title,
                         authorName: user?.displayName as String?,
                       ),
+                    );
+                  },
+                ),
+              ),
+            if (_hasMore && _loading)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.2),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
           ],
         ),
+            );
+        },
       ),
     );
   }

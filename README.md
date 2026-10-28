@@ -121,8 +121,8 @@ makensis tool/feiba_setup.nsi
 ## 首页与帖子卡片
 
 - 首页默认显示关注的吧；最近点击过的吧以带头像的 Material 3 ActionChip 横向排列在关注的吧上方。
-- 吧外帖子使用响应式 ThreadGrid，宽屏显示更多列，并带可点击的吧 chip。
-- 帖子卡片和吧 chip 使用官方 `animations` 包的 OpenContainer 做展开动画（容器变换），非卡片入口使用 Shared Axis 转场。
+- 吧内、吧外帖子都使用响应式瀑布流；吧外帖子额外显示可点击的吧 chip。
+- 帖子卡片、热吧卡片和吧 chip 使用官方 `animations` 包的 OpenContainer 做展开动画（容器变换）；图片详情使用 Hero 共享元素；非卡片入口使用 Shared Axis 转场。
 
 ## 自适应布局
 

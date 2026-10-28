@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/image_cache.dart';
 
 import '../../data/models/content_node.dart';
+import '../hero_tags.dart';
 import '../photo_view_page.dart';
 
 /// Renders Tieba rich content: text runs, links, emoticons and image grids.
@@ -215,22 +216,26 @@ class _ImageGrid extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              CachedNetworkImage(
-                imageUrl: url,
-                cacheManager: FeibaImageCache.managerFor(url),
-                fit: BoxFit.cover,
-                fadeInDuration: const Duration(milliseconds: 120),
-                placeholder: (_, _) =>
-                    Container(color: theme.colorScheme.surfaceContainerHighest),
-                errorWidget: (_, _, _) => Image.network(
-                  url,
+              Hero(
+                tag: imageHeroTag(url, index),
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  cacheManager: FeibaImageCache.managerFor(url),
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
+                  fadeInDuration: const Duration(milliseconds: 120),
+                  placeholder: (_, _) => Container(
                     color: theme.colorScheme.surfaceContainerHighest,
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      size: 22,
-                      color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  errorWidget: (_, _, _) => Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        size: 22,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),

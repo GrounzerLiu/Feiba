@@ -6,6 +6,7 @@ import '../core/image_cache.dart';
 import 'package:flutter/services.dart';
 
 import '../core/image_saver.dart';
+import 'hero_tags.dart';
 
 /// Full-screen image viewer with pinch zoom and swipe between images.
 class PhotoViewPage extends StatefulWidget {
@@ -45,23 +46,26 @@ class _PhotoViewPageState extends State<PhotoViewPage> {
                 minScale: 1,
                 maxScale: 4,
                 child: Center(
-                  child: CachedNetworkImage(
-                    imageUrl: widget.urls[index],
-                    cacheManager: FeibaImageCache.managerFor(
-                      widget.urls[index],
-                    ),
-                    fit: BoxFit.contain,
-                    fadeInDuration: const Duration(milliseconds: 120),
-                    placeholder: (_, _) => const Center(
-                      child: CircularProgressIndicator(color: Colors.white70),
-                    ),
-                    errorWidget: (_, _, _) => Image.network(
-                      widget.urls[index],
+                  child: Hero(
+                    tag: imageHeroTag(widget.urls[index], index),
+                    child: CachedNetworkImage(
+                      imageUrl: widget.urls[index],
+                      cacheManager: FeibaImageCache.managerFor(
+                        widget.urls[index],
+                      ),
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.broken_image_outlined,
-                        color: Colors.white54,
-                        size: 48,
+                      fadeInDuration: const Duration(milliseconds: 120),
+                      placeholder: (_, _) => const Center(
+                        child: CircularProgressIndicator(color: Colors.white70),
+                      ),
+                      errorWidget: (_, _, _) => Image.network(
+                        widget.urls[index],
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white54,
+                          size: 48,
+                        ),
                       ),
                     ),
                   ),
