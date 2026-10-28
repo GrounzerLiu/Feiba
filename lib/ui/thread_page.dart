@@ -10,6 +10,7 @@ import '../data/protocol_browse_repository.dart';
 import 'auth_gate.dart';
 import 'format.dart';
 import 'widgets/content_view.dart';
+import 'widgets/dismissible_sheet.dart';
 import 'widgets/name_avatar.dart';
 
 class ThreadPage extends StatefulWidget {
@@ -112,23 +113,18 @@ class _ThreadPageState extends State<ThreadPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => DraggableScrollableSheet(
-        // Keep small subpost lists compact; scrolling can expand the sheet
-        // all the way to full screen for long discussions.
-        initialChildSize: post.subPostNumber <= 3
+      enableDrag: false,
+      showDragHandle: false,
+      builder: (_) => DismissibleSheet(
+        initialSize: post.subPostNumber <= 3
             ? 0.38
             : post.subPostNumber <= 10
             ? 0.58
-            : 0.78,
-        minChildSize: 0.3,
-        maxChildSize: 1,
-        expand: false,
-        snap: true,
+            : 0.94,
         builder: (context, scrollController) => _SubPostsSheet(
           tid: widget.tid,
           pid: post.id,
@@ -646,6 +642,18 @@ class _SubPostsSheetState extends State<_SubPostsSheet> {
     final count = widget.total > 0 ? widget.total : _items.length;
     return Column(
       children: <Widget>[
+        const SizedBox(height: 8),
+        Center(
+          child: Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
           child: Row(

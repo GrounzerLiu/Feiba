@@ -7,6 +7,7 @@ import '../protocol/models/search.dart';
 import 'format.dart';
 import 'forum_page.dart';
 import 'thread_page.dart';
+import 'widgets/dismissible_sheet.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/name_avatar.dart';
 
@@ -117,14 +118,11 @@ class _SearchPageState extends State<SearchPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
+      enableDrag: false,
       builder: (sheetContext) {
         final theme = Theme.of(sheetContext);
-        return DraggableScrollableSheet(
-          initialChildSize: 0.72,
-          minChildSize: 0.42,
-          maxChildSize: 1,
-          expand: false,
-          snap: true,
+        return DismissibleSheet(
+          initialSize: 0.94,
           builder: (context, scrollController) => Material(
             color: theme.colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
