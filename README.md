@@ -12,7 +12,7 @@
 | P1 | 协议基座（aiotieba 移植）：三种传输、protobuf、账号 crypto、读写接口 | 已完成 |
 | P2 | 只读主链路：吧页帖子列表 → 帖子详情 → 楼中楼 | 已完成（协议层 getThreads/getPosts） |
 | P3 | 媒体：图片、WebView、视频 | 部分完成（图片查看/保存） |
-| P4 | 登录与多账号 | 部分完成（Android 内置 WebView 自动提取 BDUSS；Windows 手动粘贴；fetchLogin 校验） |
+| P4 | 登录与多账号 | 部分完成（Android/Windows 内置 WebView 自动提取 BDUSS；手动粘贴兜底；fetchLogin 校验） |
 | P5 | 写操作：发帖、回复、点赞、收藏 | 待开始 |
 | P6 | 搜索、用户主页、收藏、历史、热搜 | 部分完成（协议层搜索、关注的人/主页、话题榜/热吧/推荐、本地历史） |
 | P7 | 设置（主题、习惯、屏蔽、账号、关于） | 部分完成（外观/缓存/关于/许可） |
@@ -44,7 +44,7 @@
   - 热吧：吧广场「热门」分类的真实热门吧及成员数
   - 热帖：从热吧前 3 个吧取真实热帖（getThreads sort=hot）合并排序
 - 消息：登录后展示真实回复/@；游客展示用途说明与登录引导
-- 登录：Android 可在内置 WebView 完成百度登录，自动读取 HttpOnly Cookie 中的 BDUSS/STOKEN；Windows 手动粘贴
+- 登录：Android/Windows 可在内置 WebView 完成百度登录，自动读取 HttpOnly Cookie 中的 BDUSS/STOKEN；Windows 依赖 WebView2 Runtime，手动粘贴作为兜底
 - 我的：账号资料/统计、本地历史/收藏/关注、外观/缓存/关于/开源许可
 - 搜索：相关贴吧 2 列卡片（可查看全部）+ 协议层全站讨论，点击进入吧或帖子
 - 吧页：渐变吧头、排序 chips、缩略图信息流

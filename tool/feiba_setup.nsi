@@ -32,7 +32,7 @@ VIAddVersionKey "LegalCopyright" "MIT"
 
 Section "Feiba" SecMain
   SetOutPath "$INSTDIR"
-  File /r "${SOURCE_DIR}\*.*"
+  File /r /x "feiba.exe.WebView2" /x "webview2_data" "${SOURCE_DIR}\*.*"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
   CreateShortcut "$SMPROGRAMS\Feiba.lnk" "$INSTDIR\${APP_EXE}"

@@ -17,7 +17,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MaterialApp(home: LoginPage()));
     await tester.enterText(find.byType(TextField).first, 'short');
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.widgetWithText(FilledButton, '登录'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('BDUSS 长度异常'), findsOneWidget);

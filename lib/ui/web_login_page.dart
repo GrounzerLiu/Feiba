@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../core/session.dart';
 import '../core/tieba_api.dart';
 import '../protocol/core/exceptions.dart';
+import 'web_login_windows.dart';
 
 const MethodChannel _loginChannel = MethodChannel('feiba/login');
 
@@ -38,7 +39,7 @@ class _WebLoginPageState extends State<WebLoginPage> {
   @override
   void initState() {
     super.initState();
-    _openLogin();
+    if (Platform.isAndroid) _openLogin();
   }
 
   Future<void> _openLogin() async {
@@ -96,9 +97,69 @@ class _WebLoginPageState extends State<WebLoginPage> {
     }
   }
 
+  Future<void> _onWindowsCookies(String bduss, String stoken) async {
+    try {
+      TiebaApi.instance.reset();
+      final info = await TiebaApi.instance.validateCredentials(
+        bduss,
+        stoken: stoken,
+      );
+      await Session.instance.save(
+        bduss: bduss,
+        stoken: stoken,
+        userName: info.userName,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on TiebaException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = error.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = '网页登录失败：$error';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (Platform.isWindows) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('网页登录'),
+          leading: IconButton(
+            tooltip: '关闭',
+            onPressed: () async {
+              await clearWebLoginCookies();
+              if (!context.mounted) return;
+              Navigator.of(context).pop(false);
+            },
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
+        body: _error != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              )
+            : WindowsWebLoginView(
+                onCookies: _onWindowsCookies,
+                onClose: () => Navigator.of(context).pop(false),
+              ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('网页登录'),

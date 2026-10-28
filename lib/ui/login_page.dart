@@ -168,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           const SizedBox(height: 14),
-          if (Platform.isAndroid) ...<Widget>[
+          if (Platform.isAndroid || Platform.isWindows) ...<Widget>[
             FilledButton.icon(
               onPressed: _busy ? null : _webLogin,
               icon: const Icon(Icons.open_in_browser_rounded),
@@ -184,7 +184,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ] else
             Text(
-              '桌面端请手动粘贴 BDUSS；Android 支持内置网页登录',
+              '其他平台请手动粘贴 BDUSS；Android 和 Windows 支持内置网页登录',
               textAlign: TextAlign.center,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
