@@ -225,7 +225,60 @@ class _ThreadPageState extends State<ThreadPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasForum = widget.showForumChip &&
+        widget.forumName != null &&
+        widget.forumName!.isNotEmpty;
     return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: hasForum ? 124 : 100,
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                _title.isEmpty ? '帖子' : _title,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  height: 1.3,
+                ),
+              ),
+              if (hasForum) ...<Widget>[
+                const SizedBox(height: 4),
+                ForumChip(
+                  name: widget.forumName!,
+                  repo: _repo,
+                  dense: true,
+                  recordVisit: false,
+                  onPressed: _openForum,
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          IconButton(
+            tooltip: LocalLibrary.instance.isFavorite(widget.tid)
+                ? '取消收藏'
+                : '收藏',
+            onPressed: _toggleFavorite,
+            icon: Icon(
+              LocalLibrary.instance.isFavorite(widget.tid)
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded,
+            ),
+          ),
+          IconButton(
+            tooltip: '分享',
+            onPressed: _copyLink,
+            icon: const Icon(Icons.ios_share_rounded),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () => _load(reset: true),
         child: _buildBody(theme),
@@ -281,74 +334,12 @@ class _ThreadPageState extends State<ThreadPage> {
     );
   }
 
-  Widget _appBar(ThemeData theme) {
-    final hasForum = widget.showForumChip &&
-        widget.forumName != null &&
-        widget.forumName!.isNotEmpty;
-    return SliverAppBar(
-      pinned: true,
-      expandedHeight: hasForum ? 238 : 196,
-      toolbarHeight: 64,
-      backgroundColor: theme.scaffoldBackgroundColor,
-      surfaceTintColor: Colors.transparent,
-      actions: <Widget>[
-        IconButton(
-          tooltip: LocalLibrary.instance.isFavorite(widget.tid)
-              ? '取消收藏'
-              : '收藏',
-          onPressed: _toggleFavorite,
-          icon: Icon(
-            LocalLibrary.instance.isFavorite(widget.tid)
-                ? Icons.bookmark_rounded
-                : Icons.bookmark_border_rounded,
-          ),
-        ),
-        IconButton(
-          tooltip: '分享',
-          onPressed: _copyLink,
-          icon: const Icon(Icons.ios_share_rounded),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        centerTitle: false,
-        expandedTitleScale: 1.0,
-        titlePadding: const EdgeInsetsDirectional.fromSTEB(56, 24, 16, 12),
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              _title.isEmpty ? '帖子' : _title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                height: 1.3,
-              ),
-            ),
-            if (hasForum) ...<Widget>[
-              const SizedBox(height: 5),
-              ForumChip(
-                name: widget.forumName!,
-                repo: _repo,
-                dense: true,
-                recordVisit: false,
-                onPressed: _openForum,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildBody(ThemeData theme) {
     if (_posts.isEmpty) {
       return CustomScrollView(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: <Widget>[
-          _appBar(theme),
           SliverFillRemaining(
             hasScrollBody: false,
             child: _loading
@@ -379,7 +370,6 @@ class _ThreadPageState extends State<ThreadPage> {
       controller: _scroll,
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: <Widget>[
-        _appBar(theme),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
           sliver: SliverList.builder(
