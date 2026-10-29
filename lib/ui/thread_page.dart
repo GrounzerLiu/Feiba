@@ -227,31 +227,34 @@ class _ThreadPageState extends State<ThreadPage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _title.isEmpty ? '帖子' : _title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        bottom: widget.showForumChip &&
+        toolbarHeight: widget.showForumChip &&
                 widget.forumName != null &&
                 widget.forumName!.isNotEmpty
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(42),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: ForumChip(
-                      name: widget.forumName!,
-                      repo: _repo,
-                      dense: true,
-                      recordVisit: false,
-                      onPressed: _openForum,
-                    ),
-                  ),
-                ),
-              )
+            ? 68
             : null,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              _title.isEmpty ? '帖子' : _title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (widget.showForumChip &&
+                widget.forumName != null &&
+                widget.forumName!.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 3),
+              ForumChip(
+                name: widget.forumName!,
+                repo: _repo,
+                dense: true,
+                recordVisit: false,
+                onPressed: _openForum,
+              ),
+            ],
+          ],
+        ),
         actions: <Widget>[
           IconButton(
             tooltip: LocalLibrary.instance.isFavorite(widget.tid)
