@@ -287,7 +287,8 @@ class _ThreadPageState extends State<ThreadPage> {
         widget.forumName!.isNotEmpty;
     return SliverAppBar(
       pinned: true,
-      expandedHeight: hasForum ? 178 : 152,
+      expandedHeight: hasForum ? 238 : 196,
+      toolbarHeight: 64,
       backgroundColor: theme.scaffoldBackgroundColor,
       surfaceTintColor: Colors.transparent,
       actions: <Widget>[
@@ -310,19 +311,19 @@ class _ThreadPageState extends State<ThreadPage> {
       ],
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: false,
-        expandedTitleScale: 1.18,
-        titlePadding: const EdgeInsetsDirectional.fromSTEB(56, 0, 56, 14),
+        expandedTitleScale: 1.0,
+        titlePadding: const EdgeInsetsDirectional.fromSTEB(56, 24, 16, 12),
         title: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
               _title.isEmpty ? '帖子' : _title,
-              maxLines: 3,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleLarge?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
-                height: 1.2,
+                height: 1.3,
               ),
             ),
             if (hasForum) ...<Widget>[
