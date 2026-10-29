@@ -232,6 +232,26 @@ class _ThreadPageState extends State<ThreadPage> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        bottom: widget.showForumChip &&
+                widget.forumName != null &&
+                widget.forumName!.isNotEmpty
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(42),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ForumChip(
+                      name: widget.forumName!,
+                      repo: _repo,
+                      dense: true,
+                      recordVisit: false,
+                      onPressed: _openForum,
+                    ),
+                  ),
+                ),
+              )
+            : null,
         actions: <Widget>[
           IconButton(
             tooltip: LocalLibrary.instance.isFavorite(widget.tid)
@@ -330,47 +350,16 @@ class _ThreadPageState extends State<ThreadPage> {
       return const Center(child: Text('没有内容'));
     }
 
-    final hasChip = widget.showForumChip &&
-        widget.forumName != null &&
-        widget.forumName!.isNotEmpty;
     return ListView.builder(
       controller: _scroll,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
-      itemCount: _posts.length + (hasChip ? 1 : 0) + (_hasMore ? 1 : 0),
+      itemCount: _posts.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
-        if (hasChip && index == 0) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: ForumChip(
-                name: widget.forumName!,
-                repo: _repo,
-                dense: true,
-                recordVisit: false,
-                onPressed: _openForum,
-              ),
-            ),
-          );
-        }
-        final postIndex = index - (hasChip ? 1 : 0);
-        if (postIndex >= _posts.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 18),
-            child: Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.2),
-              ),
-            ),
-          );
-        }
-        final post = _posts[postIndex];
+        final post = _posts[index];
         return _PostCard(
           post: post,
-          isOp: postIndex == 0,
+          isOp: index == 0,
           author: _users[post.authorId],
           onAuthorTap: _users[post.authorId] == null
               ? null
