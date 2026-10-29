@@ -250,4 +250,5 @@ ExpressiveSheet 等官方尚未提供，项目没有用第三方实现冒充。
 - ForumChip 使用 Material 3 ActionChip，带头像和名字；点击时写入 LocalLibrary 的访问时间。
 - 吧内帖子使用 SliverMasonryGrid；吧外帖子使用 ThreadGrid，二者都按可用宽度 1–4 列排列；吧外卡片底部显示可点击的吧 chip。
 - 帖子卡片从当前位置展开为帖子详情页；热吧卡片展开为吧页；吧 chip 从当前位置展开为吧页。都使用官方 `animations` 包的 OpenContainer 容器变换。
-- 热吧保持排行单列，卡片最大宽度 760dp；图片网格的缩略图和全屏图片查看器使用 Hero 共享元素。
+- 热吧和话题保留排行序号，使用自适应 grid；图片缩略图按原始屏幕矩形插值缩放到全屏查看器，查看器本身使用 PhotoView 缩放。
+- 全屏图片支持双指缩放、左右切换和下拉关闭：拖动时图片跟手、背景渐隐，松手未超过阈值则回弹。

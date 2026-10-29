@@ -54,11 +54,11 @@ class ForumFollowCard extends StatelessWidget {
           onTap();
         },
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          padding: const EdgeInsets.fromLTRB(8, 8, 6, 8),
           child: Row(
             children: <Widget>[
-              ForumAvatar(name: forum.name, repo: repo, size: 40),
-              const SizedBox(width: 10),
+              ForumAvatar(name: forum.name, repo: repo, size: 32),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -68,7 +68,7 @@ class ForumFollowCard extends StatelessWidget {
                       forum.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: theme.textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -77,8 +77,8 @@ class ForumFollowCard extends StatelessWidget {
                       children: <Widget>[
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: 5,
+                            vertical: 1,
                           ),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.14),
@@ -88,7 +88,7 @@ class ForumFollowCard extends StatelessWidget {
                             level > 0 ? 'Lv.$level' : 'Lv.--',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: color,
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -100,7 +100,7 @@ class ForumFollowCard extends StatelessWidget {
                               : signed
                               ? Icons.check_circle_rounded
                               : Icons.radio_button_unchecked,
-                          size: 13,
+                          size: 12,
                           color: signColor,
                         ),
                         const SizedBox(width: 3),
@@ -108,7 +108,7 @@ class ForumFollowCard extends StatelessWidget {
                           signLabel,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: signColor,
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -118,7 +118,7 @@ class ForumFollowCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 2),
-              const Icon(Icons.chevron_right_rounded, size: 18),
+              const Icon(Icons.chevron_right_rounded, size: 16),
             ],
           ),
         ),

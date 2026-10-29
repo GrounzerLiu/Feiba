@@ -2,7 +2,7 @@ import 'package:animations/animations.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Material container-transform wrapper for expanding a thread card into its
-/// detail page, equivalent to Compose shared bounds.
+/// detail page.
 class ThreadOpenContainer extends StatelessWidget {
   const ThreadOpenContainer({
     super.key,

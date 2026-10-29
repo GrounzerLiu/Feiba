@@ -34,6 +34,7 @@ class ThreadGrid extends StatelessWidget {
             final thread = feed.threads[index];
             final author = feed.users[thread.authorId];
             return ThreadOpenContainer(
+              key: ValueKey<int>(thread.tid),
               closedBuilder: (context, open) => ThreadCard(
                 thread: thread,
                 authorName: author?.displayName,

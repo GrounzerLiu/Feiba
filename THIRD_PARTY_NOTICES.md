@@ -48,6 +48,12 @@
 - 许可证：BSD-3-Clause（Flutter 官方 Material motion 示例包）
 - 使用方式：帖子详情的 OpenContainer 卡片展开动画，以及非卡片入口的 Shared Axis 转场。
 
+## photo_view
+
+- 项目：https://pub.dev/packages/photo_view
+- 许可证：MIT
+- 使用方式：全屏图片的缩放、平移与多图切换。
+
 ## Dart / Flutter 依赖
 
 见 pubspec.yaml，各自遵循其 pub.dev 许可证。

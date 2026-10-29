@@ -17,12 +17,14 @@ class ForumChip extends StatelessWidget {
     required this.repo,
     this.onPressed,
     this.dense = false,
+    this.recordVisit = true,
   });
 
   final String name;
   final ProtocolBrowseRepository repo;
   final VoidCallback? onPressed;
   final bool dense;
+  final bool recordVisit;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +50,9 @@ class ForumChip extends StatelessWidget {
       onPressed: onPressed == null
           ? null
           : () {
-              LocalLibrary.instance.recordForumVisit(label);
+              if (recordVisit) {
+                LocalLibrary.instance.recordForumVisit(label);
+              }
               onPressed!();
             },
       visualDensity: dense ? VisualDensity.compact : VisualDensity.standard,
@@ -78,6 +82,7 @@ class ForumChipOpenContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OpenContainer(
+      key: ValueKey<String>('forum-open-$name'),
       transitionDuration: const Duration(milliseconds: 300),
       transitionType: ContainerTransitionType.fadeThrough,
       closedColor: theme.colorScheme.surfaceContainerLow,
@@ -87,13 +92,23 @@ class ForumChipOpenContainer extends StatelessWidget {
       openElevation: 0,
       closedShape: const StadiumBorder(),
       openShape: const RoundedRectangleBorder(),
-      closedBuilder: (context, open) => ForumChip(
-        name: name,
-        repo: repo,
-        dense: dense,
-        onPressed: open,
+      closedBuilder: (context, open) => Material(
+        type: MaterialType.transparency,
+        child: ForumChip(
+          name: name,
+          repo: repo,
+          dense: dense,
+          recordVisit: false,
+          onPressed: open,
+        ),
       ),
       openBuilder: (context, _) => ForumPage(forumName: name),
+      onClosed: (_) {
+        Future<void>.delayed(
+          const Duration(milliseconds: 340),
+          () => LocalLibrary.instance.recordForumVisit(name),
+        );
+      },
     );
   }
 }

@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/image_cache.dart';
 
 import '../../data/models/content_node.dart';
-import '../hero_tags.dart';
 import '../photo_view_page.dart';
 
 /// Renders Tieba rich content: text runs, links, emoticons and image grids.
@@ -202,23 +201,29 @@ class _ImageGrid extends StatelessWidget {
     String? overlay,
   }) {
     final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => PhotoViewPage(urls: allUrls, initialIndex: index),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              Hero(
-                tag: imageHeroTag(url, index),
-                child: CachedNetworkImage(
+    return Builder(
+      builder: (tileContext) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          final box = tileContext.findRenderObject() as RenderBox;
+          final rect = box.localToGlobal(Offset.zero) & box.size;
+          Navigator.of(context).push(
+            imageViewerRoute<void>(
+              sourceRect: rect,
+              imageUrl: url,
+              page: PhotoViewPage(urls: allUrls, initialIndex: index),
+            ),
+          );
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                CachedNetworkImage(
                   imageUrl: url,
                   cacheManager: FeibaImageCache.managerFor(url),
                   fit: BoxFit.cover,
@@ -239,21 +244,21 @@ class _ImageGrid extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-              if (overlay != null)
-                Container(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  alignment: Alignment.center,
-                  child: Text(
-                    overlay,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
+                if (overlay != null)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    alignment: Alignment.center,
+                    child: Text(
+                      overlay,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -9,6 +9,7 @@ import '../data/models/forum_summary.dart';
 import '../data/models/tieba_user.dart';
 import '../data/protocol_browse_repository.dart';
 import 'discover_page.dart';
+import 'route_observer.dart';
 import 'forum_page.dart';
 import 'login_page.dart';
 import 'search_page.dart';
@@ -31,10 +32,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, RouteAware {
   final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
 
   bool _loading = false;
+  bool _pendingLibraryRefresh = false;
+  ModalRoute<void>? _subscribedRoute;
   bool _loggedIn = false;
   String? _error;
   String? _accountWarning;
@@ -58,7 +61,28 @@ class _HomePageState extends State<HomePage>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is ModalRoute<void> && route != _subscribedRoute) {
+      if (_subscribedRoute != null) appRouteObserver.unsubscribe(this);
+      _subscribedRoute = route;
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    if (_pendingLibraryRefresh) {
+      _pendingLibraryRefresh = false;
+      _syncLocal();
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     LocalLibrary.instance.removeListener(_onLibraryChanged);
     _tabs.dispose();
     super.dispose();
@@ -66,6 +90,11 @@ class _HomePageState extends State<HomePage>
 
   void _onLibraryChanged() {
     if (!mounted) return;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) {
+      _pendingLibraryRefresh = true;
+      return;
+    }
     _syncLocal();
     setState(() {});
   }
@@ -386,6 +415,7 @@ class _HomePageState extends State<HomePage>
                 itemBuilder: (context, index) {
                   final name = _recentForums[index];
                   return ForumChipOpenContainer(
+                    key: ValueKey<String>('recent-forum-$name'),
                     name: name,
                     repo: _repo,
                   );
@@ -417,7 +447,7 @@ class _HomePageState extends State<HomePage>
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 300,
-                mainAxisExtent: 70,
+                mainAxisExtent: 64,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
               ),
@@ -425,6 +455,7 @@ class _HomePageState extends State<HomePage>
               itemBuilder: (context, index) {
                 final forum = _forums[index];
                 return ForumFollowCard(
+                  key: ValueKey<String>('followed-forum-${forum.name}'),
                   forum: forum,
                   repo: _repo,
                   onTap: () => _openForum(forum.name),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'core/theme_controller.dart';
 import 'ui/main_shell.dart';
+import 'ui/route_observer.dart';
 import 'ui/theme.dart';
 
 class FeibaApp extends StatelessWidget {
@@ -36,6 +37,7 @@ class FeibaApp extends StatelessWidget {
             child: child ?? const SizedBox.shrink(),
           );
         },
+        navigatorObservers: <NavigatorObserver>[appRouteObserver],
         home: const MainShell(),
       ),
     );

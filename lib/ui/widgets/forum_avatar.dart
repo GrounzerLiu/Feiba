@@ -21,7 +21,15 @@ class ForumAvatar extends StatefulWidget {
 }
 
 class _ForumAvatarState extends State<ForumAvatar> {
-  late final Future<String?> _avatar = widget.repo.forumAvatar(widget.name);
+  late Future<String?> _avatar = widget.repo.forumAvatar(widget.name);
+
+  @override
+  void didUpdateWidget(covariant ForumAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.name != widget.name || oldWidget.repo != widget.repo) {
+      _avatar = widget.repo.forumAvatar(widget.name);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

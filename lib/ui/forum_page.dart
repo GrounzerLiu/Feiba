@@ -40,7 +40,6 @@ class _ForumPageState extends State<ForumPage> {
   @override
   void initState() {
     super.initState();
-    LocalLibrary.instance.recordForumVisit(widget.forumName);
     _scroll.addListener(_onScroll);
     _load(reset: true);
   }

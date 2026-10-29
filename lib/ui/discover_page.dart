@@ -264,19 +264,28 @@ class _DiscoverPageState extends State<DiscoverPage> {
           else if (_topics.isEmpty)
             const _EmptyCard(text: '话题榜暂时没有数据。')
           else
-            for (var i = 0; i < _topics.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _HotTopicCard(
-                  topic: _topics[i],
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 520,
+                mainAxisExtent: 136,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemCount: _topics.length,
+              itemBuilder: (context, index) {
+                final topic = _topics[index];
+                return _HotTopicCard(
+                  topic: topic,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) =>
-                          SearchPage(initialKeyword: _topics[i].name),
+                      builder: (_) => SearchPage(initialKeyword: topic.name),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -306,25 +315,31 @@ class _DiscoverPageState extends State<DiscoverPage> {
           else if (_hotForums.isEmpty)
             const _EmptyCard(text: '热门吧暂时没有数据。')
           else
-            for (var i = 0; i < _hotForums.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: ForumOpenContainer(
-                      closedBuilder: (context, open) => _HotForumCard(
-                        rank: i + 1,
-                        repo: _repo,
-                        forum: _hotForums[i],
-                        onTap: open,
-                      ),
-                      openBuilder: (context) =>
-                          ForumPage(forumName: _hotForums[i].name),
-                    ),
-                  ),
-                ),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 520,
+                mainAxisExtent: 72,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
               ),
+              itemCount: _hotForums.length,
+              itemBuilder: (context, index) {
+                final forum = _hotForums[index];
+                return ForumOpenContainer(
+                  key: ValueKey<String>('hot-forum-${forum.name}'),
+                  closedBuilder: (context, open) => _HotForumCard(
+                    rank: index + 1,
+                    repo: _repo,
+                    forum: forum,
+                    onTap: open,
+                  ),
+                  openBuilder: (context) =>
+                      ForumPage(forumName: forum.name),
+                );
+              },
+            ),
         ],
       ),
     );
