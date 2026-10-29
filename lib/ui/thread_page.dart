@@ -226,54 +226,6 @@ class _ThreadPageState extends State<ThreadPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: widget.showForumChip &&
-                widget.forumName != null &&
-                widget.forumName!.isNotEmpty
-            ? 68
-            : null,
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              _title.isEmpty ? '帖子' : _title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (widget.showForumChip &&
-                widget.forumName != null &&
-                widget.forumName!.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 3),
-              ForumChip(
-                name: widget.forumName!,
-                repo: _repo,
-                dense: true,
-                recordVisit: false,
-                onPressed: _openForum,
-              ),
-            ],
-          ],
-        ),
-        actions: <Widget>[
-          IconButton(
-            tooltip: LocalLibrary.instance.isFavorite(widget.tid)
-                ? '取消收藏'
-                : '收藏',
-            onPressed: _toggleFavorite,
-            icon: Icon(
-              LocalLibrary.instance.isFavorite(widget.tid)
-                  ? Icons.bookmark_rounded
-                  : Icons.bookmark_border_rounded,
-            ),
-          ),
-          IconButton(
-            tooltip: '分享',
-            onPressed: _copyLink,
-            icon: const Icon(Icons.ios_share_rounded),
-          ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: () => _load(reset: true),
         child: _buildBody(theme),
@@ -329,54 +281,141 @@ class _ThreadPageState extends State<ThreadPage> {
     );
   }
 
-  Widget _buildBody(ThemeData theme) {
-    if (_posts.isEmpty) {
-      if (_loading) return const LoadingIndicator(minHeight: 260);
-      if (_error != null) {
-        return ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
+  Widget _appBar(ThemeData theme) {
+    final hasForum = widget.showForumChip &&
+        widget.forumName != null &&
+        widget.forumName!.isNotEmpty;
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: hasForum ? 178 : 152,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      surfaceTintColor: Colors.transparent,
+      actions: <Widget>[
+        IconButton(
+          tooltip: LocalLibrary.instance.isFavorite(widget.tid)
+              ? '取消收藏'
+              : '收藏',
+          onPressed: _toggleFavorite,
+          icon: Icon(
+            LocalLibrary.instance.isFavorite(widget.tid)
+                ? Icons.bookmark_rounded
+                : Icons.bookmark_border_rounded,
+          ),
+        ),
+        IconButton(
+          tooltip: '分享',
+          onPressed: _copyLink,
+          icon: const Icon(Icons.ios_share_rounded),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        centerTitle: false,
+        expandedTitleScale: 1.18,
+        titlePadding: const EdgeInsetsDirectional.fromSTEB(56, 0, 56, 14),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const SizedBox(height: 120),
-            const Icon(Icons.cloud_off_rounded, size: 38),
-            const SizedBox(height: 12),
-            const Text('加载失败，检查网络后再试', textAlign: TextAlign.center),
-            const SizedBox(height: 14),
-            Center(
-              child: FilledButton(
-                onPressed: () => _load(reset: true),
-                child: const Text('重试'),
+            Text(
+              _title.isEmpty ? '帖子' : _title,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                height: 1.2,
               ),
             ),
+            if (hasForum) ...<Widget>[
+              const SizedBox(height: 5),
+              ForumChip(
+                name: widget.forumName!,
+                repo: _repo,
+                dense: true,
+                recordVisit: false,
+                onPressed: _openForum,
+              ),
+            ],
           ],
-        );
-      }
-      return const Center(child: Text('没有内容'));
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(ThemeData theme) {
+    if (_posts.isEmpty) {
+      return CustomScrollView(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: <Widget>[
+          _appBar(theme),
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _loading
+                ? const LoadingIndicator(minHeight: 260)
+                : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Icon(Icons.cloud_off_rounded, size: 38),
+                        const SizedBox(height: 12),
+                        const Text('加载失败，检查网络后再试'),
+                        const SizedBox(height: 14),
+                        FilledButton(
+                          onPressed: () => _load(reset: true),
+                          child: const Text('重试'),
+                        ),
+                      ],
+                    ),
+                  )
+                : const Center(child: Text('没有内容')),
+          ),
+        ],
+      );
     }
 
-    return ListView.builder(
+    return CustomScrollView(
       controller: _scroll,
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
-      itemCount: _posts.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        final post = _posts[index];
-        return _PostCard(
-          post: post,
-          isOp: index == 0,
-          author: _users[post.authorId],
-          onAuthorTap: _users[post.authorId] == null
-              ? null
-              : () => _openUser(
-                  post.authorId,
-                  _users[post.authorId]!.displayName,
+      slivers: <Widget>[
+        _appBar(theme),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
+          sliver: SliverList.builder(
+            itemCount: _posts.length,
+            itemBuilder: (context, index) {
+              final post = _posts[index];
+              final author = _users[post.authorId];
+              return _PostCard(
+                post: post,
+                isOp: index == 0,
+                author: author,
+                onAuthorTap: author == null
+                    ? null
+                    : () => _openUser(post.authorId, author.displayName),
+                users: _users,
+                subs: post.subPosts,
+                onExpand: post.subPostNumber > 0 || post.subPosts.isNotEmpty
+                    ? () => _openSubPosts(post)
+                    : null,
+              );
+            },
+          ),
+        ),
+        if (_hasMore && _loading)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.2),
                 ),
-          users: _users,
-          subs: post.subPosts,
-          onExpand: post.subPostNumber > 0 || post.subPosts.isNotEmpty
-              ? () => _openSubPosts(post)
-              : null,
-        );
-      },
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
