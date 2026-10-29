@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:photo_view/photo_view.dart';
@@ -14,9 +16,10 @@ Route<T> imageViewerRoute<T>({
   required Rect sourceRect,
   required String imageUrl,
   required Widget page,
+  ValueNotifier<Rect?>? currentRect,
 }) {
   return PageRouteBuilder<T>(
-    opaque: false,
+    opaque: true,
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 300),
     reverseTransitionDuration: const Duration(milliseconds: 260),
@@ -39,16 +42,22 @@ Route<T> imageViewerRoute<T>({
             targetHeight = screen.height;
             targetWidth = targetHeight * aspect;
           }
-          final targetRect = Rect.fromCenter(
+          final baseTarget = Rect.fromCenter(
             center: screen.center(Offset.zero),
             width: targetWidth,
             height: targetHeight,
           );
+          final targetRect =
+              curved.status == AnimationStatus.reverse &&
+                  currentRect?.value != null
+              ? currentRect!.value!
+              : baseTarget;
           final rect = Rect.lerp(sourceRect, targetRect, t)!;
           return Stack(
             children: <Widget>[
+              const Positioned.fill(child: ColoredBox(color: Colors.black)),
               Positioned.fill(
-                child: Opacity(opacity: t, child: child),
+                child: Opacity(opacity: t >= 0.999 ? 1 : 0, child: child),
               ),
               if (t < 1)
                 Positioned.fromRect(
@@ -74,10 +83,18 @@ Route<T> imageViewerRoute<T>({
 /// Full-screen image viewer with pinch zoom, swipe between images and a
 /// WeChat-like drag-down-to-dismiss gesture.
 class PhotoViewPage extends StatefulWidget {
-  const PhotoViewPage({super.key, required this.urls, this.initialIndex = 0});
+  const PhotoViewPage({
+    super.key,
+    required this.urls,
+    this.initialIndex = 0,
+    this.currentRect,
+    this.sourceRect,
+  });
 
   final List<String> urls;
   final int initialIndex;
+  final ValueNotifier<Rect?>? currentRect;
+  final Rect? sourceRect;
 
   @override
   State<PhotoViewPage> createState() => _PhotoViewPageState();
@@ -95,10 +112,15 @@ class _PhotoViewPageState extends State<PhotoViewPage>
   Animation<double>? _settleAnimation;
   late int _index = widget.initialIndex;
   double _dragOffset = 0;
+  final PhotoViewController _photoController = PhotoViewController();
+  StreamSubscription<PhotoViewControllerValue>? _controllerSubscription;
 
   @override
   void initState() {
     super.initState();
+    _controllerSubscription = _photoController.outputStateStream.listen((_) {
+      _publishRect();
+    });
     _settle.addListener(() {
       final animation = _settleAnimation;
       if (animation == null || !mounted) return;
@@ -108,9 +130,38 @@ class _PhotoViewPageState extends State<PhotoViewPage>
 
   @override
   void dispose() {
+    _controllerSubscription?.cancel();
+    _photoController.dispose();
     _settle.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _publishRect() {
+    final notifier = widget.currentRect;
+    final source = widget.sourceRect;
+    if (notifier == null || source == null || !mounted) return;
+    final screen = MediaQuery.sizeOf(context);
+    final aspect = source.width / source.height;
+    var width = screen.width;
+    var height = width / aspect;
+    if (height > screen.height) {
+      height = screen.height;
+      width = height * aspect;
+    }
+    final base = Rect.fromCenter(
+      center: screen.center(Offset.zero),
+      width: width,
+      height: height,
+    );
+    final value = _photoController.value;
+    final scale = value.scale ?? 1;
+    final offset = value.position + Offset(0, _dragOffset);
+    notifier.value = Rect.fromCenter(
+      center: base.center + offset,
+      width: base.width * scale,
+      height: base.height * scale,
+    );
   }
 
   void _resetSettle() {
@@ -122,6 +173,7 @@ class _PhotoViewPageState extends State<PhotoViewPage>
 
   void _onDragUpdate(DragUpdateDetails details) {
     setState(() => _dragOffset += details.delta.dy);
+    _publishRect();
   }
 
   void _onDragEnd(DragEndDetails details) {
@@ -152,7 +204,9 @@ class _PhotoViewPageState extends State<PhotoViewPage>
           offset: Offset(0, _dragOffset),
           child: Stack(
             children: <Widget>[
-              PhotoViewGallery.builder(
+              PhotoViewGestureDetectorScope(
+                axis: Axis.horizontal,
+                child: PhotoViewGallery.builder(
                 pageController: _controller,
                 itemCount: widget.urls.length,
                 onPageChanged: (i) {
@@ -172,13 +226,15 @@ class _PhotoViewPageState extends State<PhotoViewPage>
                       url,
                       cacheManager: FeibaImageCache.managerFor(url),
                     ),
+                    controller: _photoController,
                     initialScale: PhotoViewComputedScale.contained,
                     minScale: PhotoViewComputedScale.contained,
                     maxScale: PhotoViewComputedScale.covered * 4,
                   );
                 },
-                loadingBuilder: (context, event) => const Center(
-                  child: CircularProgressIndicator(color: Colors.white70),
+                  loadingBuilder: (context, event) => const Center(
+                    child: CircularProgressIndicator(color: Colors.white70),
+                  ),
                 ),
               ),
               SafeArea(

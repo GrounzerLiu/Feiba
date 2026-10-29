@@ -42,12 +42,6 @@
 - 许可证：MIT
 - 使用方式：吧外帖子的瀑布流卡片布局。
 
-## animations
-
-- 项目：https://pub.dev/packages/animations
-- 许可证：BSD-3-Clause（Flutter 官方 Material motion 示例包）
-- 使用方式：帖子详情的 OpenContainer 卡片展开动画，以及非卡片入口的 Shared Axis 转场。
-
 ## photo_view
 
 - 项目：https://pub.dev/packages/photo_view

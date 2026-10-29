@@ -201,17 +201,13 @@ class _ImageGrid extends StatelessWidget {
     String? overlay,
   }) {
     final theme = Theme.of(context);
-    return Builder(
-      builder: (tileContext) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          final box = tileContext.findRenderObject() as RenderBox;
-          final rect = box.localToGlobal(Offset.zero) & box.size;
-          Navigator.of(context).push(
-            imageViewerRoute<void>(
-              sourceRect: rect,
-              imageUrl: url,
-              page: PhotoViewPage(urls: allUrls, initialIndex: index),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  PhotoViewPage(urls: allUrls, initialIndex: index),
             ),
           );
         },
@@ -261,7 +257,6 @@ class _ImageGrid extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

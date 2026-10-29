@@ -1,4 +1,3 @@
-import 'package:animations/animations.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/local_library.dart';
@@ -7,9 +6,6 @@ import '../forum_page.dart';
 import 'forum_avatar.dart';
 
 /// Material 3 action chip for a forum, with a lazily loaded avatar.
-///
-/// Pressing the chip records the visit time so the recent-forum row can be
-/// ordered by the latest actual click.
 class ForumChip extends StatelessWidget {
   const ForumChip({
     super.key,
@@ -31,11 +27,7 @@ class ForumChip extends StatelessWidget {
     final theme = Theme.of(context);
     final label = name.trim().isEmpty ? '贴吧' : name.trim();
     return ActionChip(
-      avatar: ForumAvatar(
-        name: label,
-        repo: repo,
-        size: dense ? 20 : 24,
-      ),
+      avatar: ForumAvatar(name: label, repo: repo, size: dense ? 20 : 24),
       label: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: dense ? 220 : 260),
         child: Text(
@@ -65,7 +57,8 @@ class ForumChip extends StatelessWidget {
     );
   }
 }
-/// Expands a small forum chip into the forum page with a container transform.
+
+/// Opens the forum page from a forum chip with the default route animation.
 class ForumChipOpenContainer extends StatelessWidget {
   const ForumChipOpenContainer({
     super.key,
@@ -80,34 +73,18 @@ class ForumChipOpenContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return OpenContainer(
-      key: ValueKey<String>('forum-open-$name'),
-      transitionDuration: const Duration(milliseconds: 300),
-      transitionType: ContainerTransitionType.fadeThrough,
-      closedColor: theme.colorScheme.surfaceContainerLow,
-      openColor: theme.scaffoldBackgroundColor,
-      middleColor: theme.scaffoldBackgroundColor,
-      closedElevation: 0,
-      openElevation: 0,
-      closedShape: const StadiumBorder(),
-      openShape: const RoundedRectangleBorder(),
-      closedBuilder: (context, open) => Material(
-        type: MaterialType.transparency,
-        child: ForumChip(
-          name: name,
-          repo: repo,
-          dense: dense,
-          recordVisit: false,
-          onPressed: open,
-        ),
-      ),
-      openBuilder: (context, _) => ForumPage(forumName: name),
-      onClosed: (_) {
-        Future<void>.delayed(
-          const Duration(milliseconds: 340),
-          () => LocalLibrary.instance.recordForumVisit(name),
+    return ForumChip(
+      name: name,
+      repo: repo,
+      dense: dense,
+      recordVisit: false,
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => ForumPage(forumName: name),
+          ),
         );
+        LocalLibrary.instance.recordForumVisit(name);
       },
     );
   }

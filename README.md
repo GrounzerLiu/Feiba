@@ -122,7 +122,7 @@ makensis tool/feiba_setup.nsi
 
 - 首页默认显示关注的吧；最近点击过的吧以带头像的 Material 3 ActionChip 横向排列在关注的吧上方。
 - 吧内、吧外帖子都使用响应式瀑布流；吧外帖子额外显示可点击的吧 chip。
-- 帖子卡片、热吧卡片和吧 chip 使用官方 `animations` 包的 OpenContainer 做展开动画（容器变换）；图片缩略图按原位置缩放到全屏查看器；非卡片入口使用 Shared Axis 转场。
+- 帖子、吧页面和图片查看器使用 Flutter 默认页面转场；Android 启用官方 `PredictiveBackPageTransitionsBuilder` 预测性返回动画。
 
 ## 自适应布局
 

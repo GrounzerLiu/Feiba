@@ -1,8 +1,6 @@
-import 'package:animations/animations.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Material container-transform wrapper for expanding a thread card into its
-/// detail page.
+/// Opens a thread card with the platform's default page transition.
 class ThreadOpenContainer extends StatelessWidget {
   const ThreadOpenContainer({
     super.key,
@@ -17,21 +15,18 @@ class ThreadOpenContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return OpenContainer(
-      transitionDuration: const Duration(milliseconds: 320),
-      transitionType: ContainerTransitionType.fadeThrough,
-      closedColor: theme.colorScheme.surface,
-      openColor: theme.scaffoldBackgroundColor,
-      middleColor: theme.scaffoldBackgroundColor,
-      closedElevation: 0,
-      openElevation: 0,
-      closedShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(closedRadius),
-      ),
-      openShape: const RoundedRectangleBorder(),
-      closedBuilder: (context, open) => closedBuilder(context, open),
-      openBuilder: (context, _) => openBuilder(context),
+    void open() {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (childContext) => openBuilder(childContext),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: open,
+      child: closedBuilder(context, open),
     );
   }
 }
