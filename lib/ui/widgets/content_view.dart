@@ -163,10 +163,11 @@ class _ImageGrid extends StatelessWidget {
         }
 
         final count = nodes.length;
+        final visibleCount = count > 3 ? 3 : count;
         final columns = count == 2 ? 2 : 3;
         final spacing = 5.0;
         final tileWidth = (width - spacing * (columns - 1)) / columns;
-        final rows = (count / columns).ceil();
+        final rows = (visibleCount / columns).ceil();
         final tileHeight = count == 2 ? tileWidth * 0.72 : tileWidth;
         return SizedBox(
           height: rows * tileHeight + (rows - 1) * spacing,
@@ -174,15 +175,15 @@ class _ImageGrid extends StatelessWidget {
             spacing: spacing,
             runSpacing: spacing,
             children: <Widget>[
-              for (var i = 0; i < count; i++)
+              for (var i = 0; i < visibleCount; i++)
                 _tile(
                   context,
                   url: nodes[i].imageUrl!,
                   width: tileWidth,
                   height: tileHeight,
                   index: startIndex + i,
-                  overlay: i == 2 && allUrls.length > 3
-                      ? '+${allUrls.length - 3}'
+                  overlay: i == visibleCount - 1 && count > visibleCount
+                      ? '+${count - visibleCount}'
                       : null,
                 ),
             ],
