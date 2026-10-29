@@ -19,9 +19,9 @@ void main() {
     expect(find.text('动态'), findsOneWidget);
     expect(find.text('吧友'), findsOneWidget);
     expect(find.textContaining('关注的吧'), findsOneWidget);
-    expect(find.text('广场'), findsOneWidget);
-    expect(find.text('消息'), findsOneWidget);
-    expect(find.text('我的'), findsOneWidget);
+    expect(find.text('广场'), findsWidgets);
+    expect(find.text('消息'), findsWidgets);
+    expect(find.text('我的'), findsWidgets);
   });
 
   testWidgets('adaptive shell switches between bottom bar and rail', (
@@ -62,7 +62,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('广场'));
+    await tester.tap(find.byIcon(Icons.explore_outlined));
     await tester.pumpAndSettle();
     expect(find.text('话题'), findsOneWidget);
     expect(find.text('推荐'), findsOneWidget);

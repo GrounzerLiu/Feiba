@@ -234,6 +234,9 @@ Flutter 3.47 起 Material 组件由官方 `material_ui` 包提供。项目已通
 
 完整 M3E 的 ButtonGroup、SplitButton、FAB Menu、LoadingIndicator、Wavy Slider、
 ExpressiveSheet 等官方尚未提供，项目没有用第三方实现冒充。
+- 底部/侧边导航切换页面使用 AnimatedOpacity + AnimatedSlide 的 280ms 过渡，保留各页面状态。
+- Android 使用 `PredictiveBackPageTransitionsBuilder` 预测性返回动画。
+
 ## 自适应布局
 
 按 Material 3 窗口尺寸类实现：

@@ -82,21 +82,54 @@ class _MainShellState extends State<MainShell> {
     });
   }
 
+  List<Widget> _pageList() {
+    return <Widget>[
+      HomePage(loadFeed: widget.loadFeed, onExplore: () => _select(1)),
+      DiscoverPage(loadFeed: widget.loadFeed),
+      KeyedSubtree(
+        key: ValueKey<String>('notifications-$_epoch'),
+        child: const NotificationsPage(),
+      ),
+      KeyedSubtree(
+        key: ValueKey<String>('profile-$_epoch'),
+        child: const ProfilePage(),
+      ),
+    ];
+  }
+
   Widget _pages() {
-    return IndexedStack(
-      index: _index,
-      children: <Widget>[
-        HomePage(loadFeed: widget.loadFeed, onExplore: () => _select(1)),
-        DiscoverPage(loadFeed: widget.loadFeed),
-        KeyedSubtree(
-          key: ValueKey<String>('notifications-$_epoch'),
-          child: const NotificationsPage(),
-        ),
-        KeyedSubtree(
-          key: ValueKey<String>('profile-$_epoch'),
-          child: const ProfilePage(),
-        ),
-      ],
+    final pages = _pageList();
+    return ClipRect(
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          for (var i = 0; i < pages.length; i++)
+            AnimatedOpacity(
+              opacity: _index == i ? 1 : 0,
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              child: IgnorePointer(
+                ignoring: _index != i,
+                child: ExcludeSemantics(
+                  excluding: _index != i,
+                  child: TickerMode(
+                    enabled: _index == i,
+                    child: AnimatedSlide(
+                      offset: _index == i
+                          ? Offset.zero
+                          : i < _index
+                          ? const Offset(-0.018, 0)
+                          : const Offset(0.018, 0),
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeOutCubic,
+                      child: pages[i],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

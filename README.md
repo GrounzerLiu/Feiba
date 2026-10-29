@@ -124,6 +124,9 @@ makensis tool/feiba_setup.nsi
 - 吧内、吧外帖子都使用响应式瀑布流；吧外帖子额外显示可点击的吧 chip。
 - 帖子、吧页面和图片查看器使用 Flutter 默认页面转场；Android 启用官方 `PredictiveBackPageTransitionsBuilder` 预测性返回动画。
 
+- 底部/侧边导航切换页面时使用 280ms 淡入 + 轻微横向滑动过渡。
+- Android 使用官方预测性返回手势动画；图片查看器使用 PhotoView 的缩放、切图和下拉关闭。
+
 ## 自适应布局
 
 - < 600dp：底部导航栏
