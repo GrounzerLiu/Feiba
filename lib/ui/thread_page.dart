@@ -8,11 +8,15 @@ import '../data/models/thread_page.dart';
 import '../data/models/tieba_user.dart';
 import '../data/protocol_browse_repository.dart';
 import 'auth_gate.dart';
+import 'forum_page.dart';
+import 'user_page.dart';
 import 'format.dart';
 import 'widgets/content_view.dart';
 import 'widgets/dismissible_sheet.dart';
 import 'widgets/name_avatar.dart';
+import 'widgets/level_badge.dart';
 import 'widgets/loading_indicator.dart';
+import 'widgets/forum_chip.dart';
 
 class ThreadPage extends StatefulWidget {
   const ThreadPage({
@@ -21,12 +25,14 @@ class ThreadPage extends StatefulWidget {
     this.title,
     this.forumName,
     this.authorName,
+    this.showForumChip = true,
   });
 
   final int tid;
   final String? title;
   final String? forumName;
   final String? authorName;
+  final bool showForumChip;
 
   @override
   State<ThreadPage> createState() => _ThreadPageState();
@@ -58,6 +64,23 @@ class _ThreadPageState extends State<ThreadPage> {
   void dispose() {
     _scroll.dispose();
     super.dispose();
+  }
+
+  void _openForum() {
+    final name = widget.forumName;
+    if (name == null || name.isEmpty) return;
+    LocalLibrary.instance.recordForumVisit(name);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)),
+    );
+  }
+
+  void _openUser(int userId, String name) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => UserPage(userId: userId, initialName: name),
+      ),
+    );
   }
 
   void _onScroll() {
@@ -307,13 +330,32 @@ class _ThreadPageState extends State<ThreadPage> {
       return const Center(child: Text('没有内容'));
     }
 
+    final hasChip = widget.showForumChip &&
+        widget.forumName != null &&
+        widget.forumName!.isNotEmpty;
     return ListView.builder(
       controller: _scroll,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
-      itemCount: _posts.length + (_hasMore ? 1 : 0),
+      itemCount: _posts.length + (hasChip ? 1 : 0) + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index >= _posts.length) {
+        if (hasChip && index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ForumChip(
+                name: widget.forumName!,
+                repo: _repo,
+                dense: true,
+                recordVisit: false,
+                onPressed: _openForum,
+              ),
+            ),
+          );
+        }
+        final postIndex = index - (hasChip ? 1 : 0);
+        if (postIndex >= _posts.length) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 18),
             child: Center(
@@ -325,11 +367,17 @@ class _ThreadPageState extends State<ThreadPage> {
             ),
           );
         }
-        final post = _posts[index];
+        final post = _posts[postIndex];
         return _PostCard(
           post: post,
-          isOp: index == 0,
+          isOp: postIndex == 0,
           author: _users[post.authorId],
+          onAuthorTap: _users[post.authorId] == null
+              ? null
+              : () => _openUser(
+                  post.authorId,
+                  _users[post.authorId]!.displayName,
+                ),
           users: _users,
           subs: post.subPosts,
           onExpand: post.subPostNumber > 0 || post.subPosts.isNotEmpty
@@ -349,6 +397,7 @@ class _PostCard extends StatelessWidget {
     required this.users,
     this.subs = const <SubPost>[],
     this.onExpand,
+    this.onAuthorTap,
   });
 
   final PostItem post;
@@ -357,6 +406,7 @@ class _PostCard extends StatelessWidget {
   final Map<int, TiebaUser> users;
   final List<SubPost> subs;
   final VoidCallback? onExpand;
+  final VoidCallback? onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
@@ -375,19 +425,38 @@ class _PostCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              NameAvatar(name: name, imageUrl: author?.avatarUrl, size: 32),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onAuthorTap,
+                child: NameAvatar(
+                  name: name,
+                  imageUrl: author?.avatarUrl,
+                  size: 32,
+                ),
+              ),
               const SizedBox(width: 9),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      children: <Widget>[
+                        Flexible(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (author?.levelId != null &&
+                            author!.levelId! > 0) ...<Widget>[
+                          const SizedBox(width: 5),
+                          LevelBadge(level: author!.levelId!),
+                        ],
+                      ],
                     ),
                     if (time.isNotEmpty)
                       Text(
@@ -408,16 +477,6 @@ class _PostCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                onPressed: () => ScaffoldMessenger.of(context)
-                    .showSnackBar(const SnackBar(content: Text('更多操作正在接入中'))),
-                icon: Icon(
-                  Icons.more_horiz_rounded,
-                  size: 19,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 9),
@@ -435,14 +494,6 @@ class _PostCard extends StatelessWidget {
                 icon: Icons.mode_comment_outlined,
                 value: post.subPostNumber,
                 label: '回复',
-              ),
-              const Spacer(),
-              Icon(
-                Icons.more_horiz_rounded,
-                size: 16,
-                color: theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.7,
-                ),
               ),
             ],
           ),

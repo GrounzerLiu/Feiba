@@ -243,32 +243,37 @@ class _ForumPageState extends State<ForumPage> {
                     : const Center(child: Text('这个吧还没有帖子')),
               )
             else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-                sliver: SliverMasonryGrid.count(
-                  crossAxisCount: columns,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childCount: _threads.length,
-                  itemBuilder: (context, index) {
-                    final thread = _threads[index];
-                    final user = _users[thread.authorId];
-                    return ThreadOpenContainer(
-                      closedBuilder: (context, open) => ThreadCard(
-                        thread: thread,
-                        authorName: user?.displayName as String?,
-                        authorAvatar: user?.avatarUrl as String?,
-                        forumName: title,
-                        onTap: open,
-                      ),
-                      openBuilder: (context) => ThreadPage(
-                        tid: thread.tid,
-                        title: thread.title,
-                        forumName: title,
-                        authorName: user?.displayName as String?,
-                      ),
-                    );
-                  },
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
+                  child: MasonryGridView.count(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _threads.length,
+                    itemBuilder: (context, index) {
+                      final thread = _threads[index];
+                      final user = _users[thread.authorId];
+                      return ThreadOpenContainer(
+                        closedBuilder: (context, open) => ThreadCard(
+                          thread: thread,
+                          authorName: user?.displayName as String?,
+                          authorAvatar: user?.avatarUrl as String?,
+                          forumName: title,
+                          onTap: open,
+                        ),
+                        openBuilder: (context) => ThreadPage(
+                          tid: thread.tid,
+                          title: thread.title,
+                          forumName: title,
+                          authorName: user?.displayName as String?,
+                          showForumChip: false,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             if (_hasMore && _loading)
