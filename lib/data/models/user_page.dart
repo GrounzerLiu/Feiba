@@ -6,6 +6,7 @@ class UserProfile {
     required this.id,
     required this.name,
     this.avatar,
+    this.portrait = '',
     this.level = 0,
     this.postNum = 0,
     this.fanNum = 0,
@@ -18,6 +19,7 @@ class UserProfile {
   final int id;
   final String name;
   final String? avatar;
+  final String portrait;
   final int level;
   final int postNum;
   final int fanNum;

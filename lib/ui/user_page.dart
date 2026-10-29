@@ -1,19 +1,32 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/session.dart';
+import '../core/tieba_api.dart';
 import '../data/models/feed.dart';
 import '../data/models/user_page.dart';
 import '../data/protocol_browse_repository.dart';
+import '../protocol/models/user_forum_info.dart';
+import 'auth_gate.dart';
+import 'fans_page.dart';
 import 'format.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/name_avatar.dart';
 import 'widgets/thread_grid.dart';
+import 'widgets/level_badge.dart';
 import 'widgets/loading_indicator.dart';
+import 'user_posts_page.dart';
 
 class UserPage extends StatefulWidget {
-  const UserPage({super.key, required this.userId, this.initialName});
+  const UserPage({
+    super.key,
+    required this.userId,
+    this.initialName,
+    this.forumName,
+  });
 
   final int userId;
   final String? initialName;
+  final String? forumName;
 
   @override
   State<UserPage> createState() => _UserPageState();
@@ -22,6 +35,7 @@ class UserPage extends StatefulWidget {
 class _UserPageState extends State<UserPage> {
   final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
   UserPageData? _data;
+  TiebaUserForumInfo? _forumInfo;
   bool _loading = false;
   String? _error;
 
@@ -41,12 +55,56 @@ class _UserPageState extends State<UserPage> {
       final data = await _repo.userHomepage(widget.userId);
       if (!mounted) return;
       setState(() => _data = data);
+      await _loadForumIdentity(data.profile);
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _loadForumIdentity(UserProfile? profile) async {
+    final forum = widget.forumName;
+    if (profile == null ||
+        forum == null ||
+        forum.isEmpty ||
+        profile.portrait.isEmpty ||
+        !Session.instance.isLoggedIn) {
+      return;
+    }
+    final info = await TiebaApi.instance.userForumInfo(
+      forumName: forum,
+      portrait: profile.portrait,
+    );
+    if (mounted) setState(() => _forumInfo = info);
+  }
+
+  Future<void> _openFans() async {
+    if (!Session.instance.isLoggedIn) {
+      final ok = await ensureLoggedIn(
+        context,
+        action: '查看粉丝',
+        description: '登录后可以查看吧友的粉丝列表。',
+      );
+      if (!ok || !mounted) return;
+    }
+    final name = _data?.profile?.displayName ?? widget.initialName;
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FansPage(userId: widget.userId, userName: name),
+      ),
+    );
+  }
+
+  void _openAllPosts() {
+    final name = _data?.profile?.displayName ?? widget.initialName;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => UserPostsPage(userId: widget.userId, userName: name),
+      ),
+    );
   }
 
   @override
@@ -98,7 +156,14 @@ class _UserPageState extends State<UserPage> {
                 ),
               )
             else ...<Widget>[
-              SliverToBoxAdapter(child: _ProfileHeader(profile: profile)),
+              SliverToBoxAdapter(
+                child: _ProfileHeader(
+                  profile: profile,
+                  forumInfo: _forumInfo,
+                  onFansTap: _openFans,
+                  onAllPosts: _openAllPosts,
+                ),
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 22, 20, 8),
@@ -111,6 +176,11 @@ class _UserPageState extends State<UserPage> {
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: _openAllPosts,
+                        child: const Text('查看全部'),
                       ),
                     ],
                   ),
@@ -156,9 +226,17 @@ class _UserPageState extends State<UserPage> {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({required this.profile});
+  const _ProfileHeader({
+    required this.profile,
+    this.forumInfo,
+    required this.onFansTap,
+    required this.onAllPosts,
+  });
 
   final UserProfile profile;
+  final TiebaUserForumInfo? forumInfo;
+  final VoidCallback onFansTap;
+  final VoidCallback onAllPosts;
 
   @override
   Widget build(BuildContext context) {
@@ -230,11 +308,46 @@ class _ProfileHeader extends StatelessWidget {
           Row(
             children: <Widget>[
               _Stat(label: '关注', value: profile.followNum),
-              _Stat(label: '粉丝', value: profile.fanNum),
+              _Stat(
+                label: '粉丝',
+                value: profile.fanNum,
+                onTap: onFansTap,
+              ),
               _Stat(label: '发帖', value: profile.postNum),
               _Stat(label: '吧', value: profile.forumNum),
             ],
           ),
+          if (forumInfo != null) ...<Widget>[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: <Widget>[
+                  LevelBadge(level: forumInfo!.level),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '吧内身份：${forumInfo!.fname}'
+                      '${forumInfo!.roleName.isEmpty ? '' : ' · ${forumInfo!.roleName}'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium,
+                    ),
+                  ),
+                  Text(
+                    '关注${forumInfo!.followDays}天 · 签到${forumInfo!.signDays}天',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -242,32 +355,43 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value});
+  const _Stat({required this.label, required this.value, this.onTap});
 
   final String label;
   final int value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final content = Column(
+      children: <Widget>[
+        Text(
+          compactCount(value),
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
     return Expanded(
-      child: Column(
-        children: <Widget>[
-          Text(
-            compactCount(value),
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+      child: onTap == null
+          ? content
+          : InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: content,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

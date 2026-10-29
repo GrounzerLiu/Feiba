@@ -1,9 +1,11 @@
 import '../protocol/api/get_ats.dart';
 import '../protocol/api/forum_extra.dart' show fetchForumLevel;
+import '../protocol/api/get_fans.dart';
 import '../protocol/api/get_fid.dart';
 import '../protocol/api/get_follows.dart';
 import '../protocol/api/get_self_follow_forums.dart';
 import '../protocol/api/get_replies.dart';
+import '../protocol/api/get_user_forum_info.dart';
 import '../protocol/api/get_user_info.dart';
 import '../protocol/api/login.dart';
 import '../protocol/api/write_ops.dart' as ops;
@@ -13,6 +15,7 @@ import '../protocol/core/http_core.dart';
 import '../protocol/models/follow.dart';
 import '../protocol/models/notification.dart';
 import '../protocol/models/self_forums.dart';
+import '../protocol/models/user_forum_info.dart';
 import '../protocol/models/user.dart' as protocol;
 import 'session.dart';
 
@@ -112,6 +115,11 @@ class TiebaApi {
     return page.objs;
   }
 
+  Future<TiebaFans> fans(int userId, {int pn = 1}) async {
+    final http = await _ensure();
+    return fetchFans(http, userId: userId, pn: pn);
+  }
+
   Future<List<FollowUser>> followedUsers({int pn = 1}) async {
     final http = await _ensure();
     final me = await selfProfile();
@@ -135,6 +143,24 @@ class TiebaApi {
     final http = await _ensure();
     final level = await fetchForumLevel(http, fid);
     return level.isLike;
+  }
+
+  Future<TiebaUserForumInfo?> userForumInfo({
+    required String forumName,
+    required String portrait,
+  }) async {
+    if (!Session.instance.isLoggedIn || portrait.trim().isEmpty) return null;
+    try {
+      final http = await _ensure();
+      final fid = await fetchFid(http, forumName);
+      return await fetchUserForumInfo(
+        http,
+        fid: fid,
+        portrait: portrait,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> followForum(

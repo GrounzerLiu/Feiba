@@ -4,6 +4,7 @@ import '../protocol/api/get_forum.dart';
 import '../protocol/api/get_homepage.dart';
 import '../protocol/api/get_posts.dart';
 import '../protocol/api/get_threads.dart';
+import '../protocol/api/get_user_contents.dart';
 import '../protocol/api/search_global.dart';
 import '../protocol/core/account.dart';
 import '../protocol/core/enums.dart';
@@ -166,6 +167,7 @@ class ProtocolBrowseRepository {
               id: protocolUser.userId,
               name: protocolUser.displayName,
               avatar: protocolUser.avatarUrl,
+              portrait: protocolUser.portrait,
               level: protocolUser.level,
               postNum: protocolUser.postNum,
               fanNum: protocolUser.fanNum,
@@ -177,6 +179,18 @@ class ProtocolBrowseRepository {
       threads: threads,
       users: users,
     );
+  }
+
+  Future<ThreadFeed> userThreads(int userId, {int pn = 1}) async {
+    final posts = await fetchUserThreads(_core, userId: userId, pn: pn);
+    final users = <int, TiebaUser>{};
+    final threads = <ThreadSummary>[];
+    for (final thread in posts) {
+      final user = thread.user;
+      if (user != null) users[user.userId] = _mapUser(user);
+      threads.add(_mapHomepageThread(thread));
+    }
+    return ThreadFeed(threads: threads, users: users);
   }
 
   /// Resolves a forum avatar lazily; repeated cards share one request.

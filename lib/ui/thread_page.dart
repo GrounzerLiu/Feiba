@@ -78,7 +78,11 @@ class _ThreadPageState extends State<ThreadPage> {
   void _openUser(int userId, String name) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => UserPage(userId: userId, initialName: name),
+        builder: (_) => UserPage(
+          userId: userId,
+          initialName: name,
+          forumName: widget.forumName,
+        ),
       ),
     );
   }
