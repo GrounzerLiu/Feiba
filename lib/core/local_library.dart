@@ -75,6 +75,7 @@ class LocalLibrary extends ChangeNotifier {
   static const String _followedForumsKey = 'library_followed_forums_v1';
   static const String _searchesKey = 'library_recent_searches_v1';
   static const String _forumVisitsKey = 'library_forum_visits_v1';
+  static const String _forumPalettesKey = 'library_forum_palettes_v1';
   static const int _historyLimit = 50;
   static const int _favoriteLimit = 100;
   static const int _recentForumLimit = 40;
@@ -85,6 +86,7 @@ class LocalLibrary extends ChangeNotifier {
   final Set<String> _followedForums = <String>{};
   final List<String> _recentSearches = <String>[];
   final Map<String, int> _forumVisits = <String, int>{};
+  final Map<String, List<int>> _forumPalettes = <String, List<int>>{};
   bool _loaded = false;
 
   List<LocalThread> get history => List<LocalThread>.unmodifiable(_history);
@@ -96,6 +98,17 @@ class LocalLibrary extends ChangeNotifier {
   List<String> get recentSearches => List<String>.unmodifiable(_recentSearches);
 
   int? forumVisitedAt(String name) => _forumVisits[name.trim()];
+
+  List<int>? forumPalette(String avatarUrl) => _forumPalettes[avatarUrl];
+
+  Future<void> setForumPalette(String avatarUrl, List<int> colors) async {
+    if (avatarUrl.isEmpty || colors.length < 2) return;
+    _forumPalettes[avatarUrl] = colors;
+    if (_forumPalettes.length > 100) {
+      _forumPalettes.remove(_forumPalettes.keys.first);
+    }
+    await _persistIntListMap(_forumPalettesKey, _forumPalettes);
+  }
 
   List<String> get recentForums {
     final visits = <String, int>{..._forumVisits};
@@ -129,6 +142,9 @@ class LocalLibrary extends ChangeNotifier {
       _forumVisits
         ..clear()
         ..addAll(_decodeIntMap(_prefs!.getString(_forumVisitsKey)));
+      _forumPalettes
+        ..clear()
+        ..addAll(_decodeIntListMap(_prefs!.getString(_forumPalettesKey)));
     } catch (_) {
       // In-memory mode: browsing still works in this run.
     }
@@ -311,6 +327,39 @@ class LocalLibrary extends ChangeNotifier {
           .toList();
     } catch (_) {
       return const <String>[];
+    }
+  }
+
+  Map<String, List<int>> _decodeIntListMap(String? raw) {
+    if (raw == null || raw.isEmpty) return <String, List<int>>{};
+    try {
+      final value = jsonDecode(raw);
+      if (value is! Map) return <String, List<int>>{};
+      final result = <String, List<int>>{};
+      value.forEach((key, dynamic item) {
+        if (item is List) {
+          result[key.toString()] = item
+              .whereType<num>()
+              .map((number) => number.toInt())
+              .toList(growable: false);
+        }
+      });
+      return result;
+    } catch (_) {
+      return <String, List<int>>{};
+    }
+  }
+
+  Future<void> _persistIntListMap(
+    String key,
+    Map<String, List<int>> value,
+  ) async {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    try {
+      await prefs.setString(key, jsonEncode(value));
+    } catch (_) {
+      // Storage is optional.
     }
   }
 

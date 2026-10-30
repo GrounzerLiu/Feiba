@@ -2,6 +2,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:palette_generator/palette_generator.dart';
 
+import '../core/image_cache.dart';
 import '../core/local_library.dart';
 import '../core/session.dart';
 import '../core/tieba_api.dart';
@@ -32,7 +33,6 @@ class _ForumPageState extends State<ForumPage> {
   TiebaForum? _forum;
   List<Color>? _headerColors;
   String? _paletteUrl;
-  static final Map<String, List<Color>> _paletteCache = <String, List<Color>>{};
   Map<int, dynamic> _users = const <int, dynamic>{};
   int _page = 1;
   int _sort = 0;
@@ -111,20 +111,32 @@ class _ForumPageState extends State<ForumPage> {
     final url = forum?.avatar;
     if (url == null || url.isEmpty || _paletteUrl == url) return;
     _paletteUrl = url;
-    final cached = _paletteCache[url];
-    if (cached != null) {
-      if (mounted) setState(() => _headerColors = cached);
+
+    final saved = LocalLibrary.instance.forumPalette(url);
+    if (saved != null && saved.length >= 2) {
+      if (mounted) {
+        setState(() {
+          _headerColors = saved.map((value) => Color(value)).toList();
+        });
+      }
       return;
     }
+
     try {
+      final manager = FeibaImageCache.managerFor(url);
+      final cached = await manager.getFileFromCache(url);
+      final file = cached?.file ?? await manager.getSingleFile(url);
       final palette = await PaletteGenerator.fromImageProvider(
-        NetworkImage(url),
+        FileImage(file),
         size: const Size(64, 64),
         maximumColorCount: 8,
       );
       if (!mounted) return;
       final colors = _gradientColors(palette);
-      _paletteCache[url] = colors;
+      await LocalLibrary.instance.setForumPalette(
+        url,
+        colors.map((color) => color.toARGB32()).toList(growable: false),
+      );
       if (mounted && _paletteUrl == url) {
         setState(() => _headerColors = colors);
       }
