@@ -232,13 +232,15 @@ class _ThreadPageState extends State<ThreadPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: kThreadPageMaxWidth),
-          child: RefreshIndicator(
-            onRefresh: () => _load(reset: true),
-            child: _buildBody(theme),
+      body: LayoutBuilder(
+        builder: (context, constraints) => Center(
+          child: SizedBox(
+            width: constraints.maxWidth.clamp(0.0, kThreadPageMaxWidth),
+            height: constraints.maxHeight,
+            child: RefreshIndicator(
+              onRefresh: () => _load(reset: true),
+              child: _buildBody(theme),
+            ),
           ),
         ),
       ),
