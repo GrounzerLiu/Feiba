@@ -48,6 +48,14 @@ class _ForumPageState extends State<ForumPage> {
     if (cached != null && cached.length >= 2) {
       _headerColors = cached.map((value) => Color(value)).toList();
     }
+    final cachedAvatar = LocalLibrary.instance.forumAvatar(widget.forumName);
+    if (cachedAvatar != null && cachedAvatar.isNotEmpty) {
+      _forum = TiebaForum(
+        id: 0,
+        name: widget.forumName,
+        avatar: cachedAvatar,
+      );
+    }
     _scroll.addListener(_onScroll);
     _load(reset: true);
   }
@@ -91,6 +99,10 @@ class _ForumPageState extends State<ForumPage> {
         _hasMore = data.hasMore;
         _page += 1;
       });
+      final avatar = data.forum?.avatar;
+      if (avatar != null && avatar.isNotEmpty) {
+        LocalLibrary.instance.setForumAvatar(widget.forumName, avatar);
+      }
       _loadHeaderPalette(data.forum);
       final fid = data.forum?.id ?? 0;
       if (Session.instance.isLoggedIn && fid > 0) {

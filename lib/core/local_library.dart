@@ -76,6 +76,7 @@ class LocalLibrary extends ChangeNotifier {
   static const String _searchesKey = 'library_recent_searches_v1';
   static const String _forumVisitsKey = 'library_forum_visits_v1';
   static const String _forumPalettesKey = 'library_forum_palettes_v1';
+  static const String _forumAvatarsKey = 'library_forum_avatars_v1';
   static const int _historyLimit = 50;
   static const int _favoriteLimit = 100;
   static const int _recentForumLimit = 40;
@@ -87,6 +88,7 @@ class LocalLibrary extends ChangeNotifier {
   final List<String> _recentSearches = <String>[];
   final Map<String, int> _forumVisits = <String, int>{};
   final Map<String, List<int>> _forumPalettes = <String, List<int>>{};
+  final Map<String, String> _forumAvatars = <String, String>{};
   bool _loaded = false;
 
   List<LocalThread> get history => List<LocalThread>.unmodifiable(_history);
@@ -104,6 +106,19 @@ class LocalLibrary extends ChangeNotifier {
 
   List<int>? forumPaletteByName(String forumName) =>
       _forumPalettes['name:${forumName.trim()}'];
+
+  String? forumAvatar(String forumName) =>
+      _forumAvatars[forumName.trim()];
+
+  Future<void> setForumAvatar(String forumName, String avatarUrl) async {
+    final name = forumName.trim();
+    if (name.isEmpty || avatarUrl.isEmpty) return;
+    _forumAvatars[name] = avatarUrl;
+    if (_forumAvatars.length > 100) {
+      _forumAvatars.remove(_forumAvatars.keys.first);
+    }
+    await _persistStringMap(_forumAvatarsKey, _forumAvatars);
+  }
 
   Future<void> setForumPalette(
     String avatarUrl,
@@ -155,6 +170,9 @@ class LocalLibrary extends ChangeNotifier {
       _forumPalettes
         ..clear()
         ..addAll(_decodeIntListMap(_prefs!.getString(_forumPalettesKey)));
+      _forumAvatars
+        ..clear()
+        ..addAll(_decodeStringMap(_prefs!.getString(_forumAvatarsKey)));
     } catch (_) {
       // In-memory mode: browsing still works in this run.
     }
@@ -337,6 +355,32 @@ class LocalLibrary extends ChangeNotifier {
           .toList();
     } catch (_) {
       return const <String>[];
+    }
+  }
+
+  Map<String, String> _decodeStringMap(String? raw) {
+    if (raw == null || raw.isEmpty) return <String, String>{};
+    try {
+      final value = jsonDecode(raw);
+      if (value is! Map) return <String, String>{};
+      return value.map(
+        (key, dynamic item) => MapEntry(key.toString(), item.toString()),
+      );
+    } catch (_) {
+      return <String, String>{};
+    }
+  }
+
+  Future<void> _persistStringMap(
+    String key,
+    Map<String, String> value,
+  ) async {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    try {
+      await prefs.setString(key, jsonEncode(value));
+    } catch (_) {
+      // Storage is optional.
     }
   }
 
