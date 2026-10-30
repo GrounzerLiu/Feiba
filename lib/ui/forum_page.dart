@@ -13,6 +13,7 @@ import '../data/protocol_browse_repository.dart';
 import 'auth_gate.dart';
 import 'format.dart';
 import 'thread_page.dart';
+import 'forum_ranking_page.dart';
 import 'widgets/thread_open_container.dart';
 import 'widgets/loading_indicator.dart';
 import 'widgets/name_avatar.dart';
@@ -291,6 +292,17 @@ class _ForumPageState extends State<ForumPage> {
               onPressed: _signForum,
               icon: const Icon(Icons.how_to_reg_outlined),
             ),
+          IconButton(
+            tooltip: '榜单',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ForumRankingPage(forumName: title),
+                ),
+              );
+            },
+            icon: const Icon(Icons.leaderboard_outlined),
+          ),
           IconButton(
             tooltip: '刷新',
             onPressed: () => _load(reset: true),

@@ -8,6 +8,12 @@ import '../protocol/api/get_replies.dart';
 import '../protocol/api/get_user_forum_info.dart';
 import '../protocol/api/get_user_info.dart';
 import '../protocol/api/login.dart';
+import '../protocol/api/rank_forums.dart' as rank_forums_api;
+import '../protocol/api/rank_users.dart' as rank_users_api;
+import '../protocol/api/rank_member_users.dart' as rank_members_api;
+import '../protocol/models/rank_forums.dart' show RankForums, RankForumType;
+import '../protocol/models/rank_users.dart' show RankUsers;
+import '../protocol/models/rank_member_users.dart' show MemberUsers;
 import '../protocol/api/write_ops.dart' as ops;
 import '../protocol/core/account.dart';
 import '../protocol/core/exceptions.dart';
@@ -181,6 +187,30 @@ class TiebaApi {
   Future<void> signForum(String fname) async {
     final http = await _ensure();
     await ops.signForum(http, fname);
+  }
+
+  Future<RankForums> forumSignRanking(
+    String fname, {
+    int pn = 1,
+    RankForumType type = RankForumType.weekly,
+  }) async {
+    final http = await _ensure();
+    return rank_forums_api.fetchRankForums(
+      http,
+      fname: fname,
+      pn: pn,
+      rankType: type,
+    );
+  }
+
+  Future<RankUsers> forumLevelRanking(String fname, {int pn = 1}) async {
+    final http = await _ensure();
+    return rank_users_api.fetchRankUsers(http, fname: fname, pn: pn);
+  }
+
+  Future<MemberUsers> forumMemberRanking(String fname, {int pn = 1}) async {
+    final http = await _ensure();
+    return rank_members_api.fetchMemberUsers(http, fname: fname, pn: pn);
   }
 
   Future<void> setThreadAgree(int tid, {required bool undo}) async {
