@@ -1,5 +1,6 @@
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:palette_generator/palette_generator.dart';
 
 import '../core/local_library.dart';
 import '../core/session.dart';
@@ -29,6 +30,9 @@ class _ForumPageState extends State<ForumPage> {
 
   final List<ThreadSummary> _threads = <ThreadSummary>[];
   TiebaForum? _forum;
+  List<Color>? _headerColors;
+  String? _paletteUrl;
+  static final Map<String, List<Color>> _paletteCache = <String, List<Color>>{};
   Map<int, dynamic> _users = const <int, dynamic>{};
   int _page = 1;
   int _sort = 0;
@@ -83,6 +87,7 @@ class _ForumPageState extends State<ForumPage> {
         _hasMore = data.hasMore;
         _page += 1;
       });
+      _loadHeaderPalette(data.forum);
       final fid = data.forum?.id ?? 0;
       if (Session.instance.isLoggedIn && fid > 0) {
         () async {
@@ -100,6 +105,55 @@ class _ForumPageState extends State<ForumPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _loadHeaderPalette(TiebaForum? forum) async {
+    final url = forum?.avatar;
+    if (url == null || url.isEmpty || _paletteUrl == url) return;
+    _paletteUrl = url;
+    final cached = _paletteCache[url];
+    if (cached != null) {
+      if (mounted) setState(() => _headerColors = cached);
+      return;
+    }
+    try {
+      final palette = await PaletteGenerator.fromImageProvider(
+        NetworkImage(url),
+        size: const Size(64, 64),
+        maximumColorCount: 8,
+      );
+      if (!mounted) return;
+      final colors = _gradientColors(palette);
+      _paletteCache[url] = colors;
+      if (mounted && _paletteUrl == url) {
+        setState(() => _headerColors = colors);
+      }
+    } catch (_) {
+      // Keep the brand gradient when the avatar cannot be decoded.
+    }
+  }
+
+  List<Color> _gradientColors(PaletteGenerator palette) {
+    final theme = Theme.of(context);
+    final dominant =
+        palette.darkVibrantColor?.color ??
+        palette.dominantColor?.color ??
+        theme.colorScheme.primary;
+    final accent =
+        palette.vibrantColor?.color ??
+        palette.mutedColor?.color ??
+        dominant;
+    final baseHsl = HSLColor.fromColor(dominant);
+    final accentHsl = HSLColor.fromColor(accent);
+    final base = baseHsl
+        .withSaturation(baseHsl.saturation.clamp(0.35, 0.8))
+        .withLightness(baseHsl.lightness.clamp(0.18, 0.36))
+        .toColor();
+    final second = accentHsl
+        .withSaturation(accentHsl.saturation.clamp(0.4, 0.82))
+        .withLightness(accentHsl.lightness.clamp(0.28, 0.48))
+        .toColor();
+    return <Color>[base, second];
   }
 
   Future<void> _toggleFollow() async {
@@ -202,6 +256,7 @@ class _ForumPageState extends State<ForumPage> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                 child: _ForumHeader(
                   forum: _forum,
+                  colors: _headerColors,
                   fallbackName: widget.forumName,
                   followed: Session.instance.isLoggedIn
                       ? (_accountFollowed ?? false)
@@ -303,12 +358,14 @@ class _ForumHeader extends StatelessWidget {
   const _ForumHeader({
     required this.forum,
     required this.fallbackName,
+    this.colors,
     required this.followed,
     required this.onFollow,
   });
 
   final TiebaForum? forum;
   final String fallbackName;
+  final List<Color>? colors;
   final bool followed;
   final VoidCallback onFollow;
 
@@ -316,22 +373,29 @@ class _ForumHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final name = forum?.name ?? fallbackName;
+    final colors = this.colors;
     final gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: <Color>[
-        theme.colorScheme.primary,
-        theme.colorScheme.primary.withValues(alpha: 0.72),
-      ],
+      colors: colors != null && colors.length >= 2
+          ? <Color>[colors[0], colors[1]]
+          : <Color>[
+              theme.colorScheme.primary,
+              theme.colorScheme.primary.withValues(alpha: 0.72),
+            ],
     );
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: BorderRadius.circular(24),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.18),
+            color: (colors?.first ?? theme.colorScheme.primary).withValues(
+              alpha: 0.24,
+            ),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
