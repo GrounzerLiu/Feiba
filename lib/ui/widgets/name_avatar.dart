@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/image_cache.dart';
@@ -59,25 +60,7 @@ class NameAvatar extends StatelessWidget {
     final url = imageUrl;
     final image = url == null || url.isEmpty
         ? null
-        : CachedNetworkImage(
-            imageUrl: url,
-            cacheManager: FeibaImageCache.managerFor(url),
-            fit: BoxFit.cover,
-            width: size,
-            height: size,
-            memCacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
-                .round()
-                .clamp(1, 1024),
-            fadeInDuration: const Duration(milliseconds: 120),
-            placeholder: (_, _) => const SizedBox.shrink(),
-            errorWidget: (_, _, _) => Image.network(
-              url,
-              fit: BoxFit.cover,
-              width: size,
-              height: size,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            ),
-          );
+        : _CachedAvatarImage(url: url, size: size);
     return Container(
       width: size,
       height: size,
@@ -96,6 +79,81 @@ class NameAvatar extends StatelessWidget {
           children: <Widget>[fallback, image ?? const SizedBox.shrink()],
         ),
       ),
+    );
+  }
+}
+
+class _CachedAvatarImage extends StatefulWidget {
+  const _CachedAvatarImage({required this.url, required this.size});
+
+  final String url;
+  final double size;
+
+  @override
+  State<_CachedAvatarImage> createState() => _CachedAvatarImageState();
+}
+
+class _CachedAvatarImageState extends State<_CachedAvatarImage> {
+  late Future<FileInfo?> _fileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileFuture = _cachedFile();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CachedAvatarImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) _fileFuture = _cachedFile();
+  }
+
+  Future<FileInfo?> _cachedFile() {
+    return FeibaImageCache.managerFor(widget.url).getFileFromCache(widget.url);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<FileInfo?>(
+      future: _fileFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        final file = snapshot.data?.file;
+        if (file != null && file.existsSync()) {
+          return Image.file(
+            file,
+            fit: BoxFit.cover,
+            width: widget.size,
+            height: widget.size,
+            gaplessPlayback: true,
+            cacheWidth: (widget.size * MediaQuery.devicePixelRatioOf(context))
+                .round()
+                .clamp(1, 1024),
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          );
+        }
+        return CachedNetworkImage(
+          imageUrl: widget.url,
+          cacheManager: FeibaImageCache.managerFor(widget.url),
+          fit: BoxFit.cover,
+          width: widget.size,
+          height: widget.size,
+          memCacheWidth: (widget.size * MediaQuery.devicePixelRatioOf(context))
+              .round()
+              .clamp(1, 1024),
+          fadeInDuration: const Duration(milliseconds: 120),
+          placeholder: (_, _) => const SizedBox.shrink(),
+          errorWidget: (_, _, _) => Image.network(
+            widget.url,
+            fit: BoxFit.cover,
+            width: widget.size,
+            height: widget.size,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
+        );
+      },
     );
   }
 }
