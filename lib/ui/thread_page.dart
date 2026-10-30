@@ -52,6 +52,9 @@ class _ThreadPageState extends State<ThreadPage> {
   bool _hasMore = true;
   String? _error;
   bool _liked = false;
+  bool _descending = false;
+  bool _onlyAuthor = false;
+  int? _opAuthorId;
   String _title = '';
 
   @override
@@ -109,7 +112,12 @@ class _ThreadPageState extends State<ThreadPage> {
     });
     final wasEmpty = _posts.isEmpty;
     try {
-      final data = await _repo.threadPage(widget.tid, pn: _page);
+      final data = await _repo.threadPage(
+        widget.tid,
+        pn: _page,
+        descending: _descending,
+        onlyAuthor: _onlyAuthor,
+      );
       if (!mounted) return;
       setState(() {
         _posts.addAll(data.posts);
@@ -117,6 +125,11 @@ class _ThreadPageState extends State<ThreadPage> {
         if (data.title.isNotEmpty) _title = data.title;
         _hasMore = data.hasMore;
         _page += 1;
+        if (_opAuthorId == null &&
+            data.posts.isNotEmpty &&
+            !_descending) {
+          _opAuthorId = data.posts.first.authorId;
+        }
       });
       if (wasEmpty) {
         final first = data.posts.isEmpty ? null : data.posts.first;
@@ -329,6 +342,82 @@ class _ThreadPageState extends State<ThreadPage> {
     );
   }
 
+  void _setOrder(bool descending) {
+    if (_descending == descending) return;
+    setState(() => _descending = descending);
+    _load(reset: true);
+  }
+
+  void _toggleOnlyAuthor() {
+    setState(() => _onlyAuthor = !_onlyAuthor);
+    _load(reset: true);
+  }
+
+  void _scrollToTop() {
+    if (!_scroll.hasClients) return;
+    _scroll.animateTo(
+      0,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _scrollToBottom() {
+    if (!_scroll.hasClients) return;
+    _scroll.animateTo(
+      _scroll.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _threadControls(ThemeData theme) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: kThreadPageMaxWidth),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                ChoiceChip(
+                  label: const Text('正序'),
+                  selected: !_descending,
+                  onSelected: (_) => _setOrder(false),
+                ),
+                ChoiceChip(
+                  label: const Text('倒序'),
+                  selected: _descending,
+                  onSelected: (_) => _setOrder(true),
+                ),
+                FilterChip(
+                  label: const Text('只看楼主'),
+                  selected: _onlyAuthor,
+                  onSelected: (_) => _toggleOnlyAuthor(),
+                ),
+                IconButton(
+                  tooltip: '回到顶部',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _scrollToTop,
+                  icon: const Icon(Icons.vertical_align_top_rounded, size: 20),
+                ),
+                IconButton(
+                  tooltip: '回到底部',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _scrollToBottom,
+                  icon: const Icon(Icons.vertical_align_bottom_rounded, size: 20),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBody(ThemeData theme) {
     if (_posts.isEmpty) {
       return CustomScrollView(
@@ -336,6 +425,7 @@ class _ThreadPageState extends State<ThreadPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: <Widget>[
           _threadHeader(theme),
+          _threadControls(theme),
           SliverFillRemaining(
             hasScrollBody: false,
             child: _loading
@@ -367,6 +457,7 @@ class _ThreadPageState extends State<ThreadPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: <Widget>[
         _threadHeader(theme),
+        _threadControls(theme),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
           sliver: SliverList.builder(
@@ -382,7 +473,7 @@ class _ThreadPageState extends State<ThreadPage> {
                   ),
                   child: _PostCard(
                     post: post,
-                    isOp: index == 0,
+                    isOp: _opAuthorId != null && post.authorId == _opAuthorId,
                     author: author,
                     onAuthorTap: author == null
                         ? null

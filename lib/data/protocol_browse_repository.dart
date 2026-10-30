@@ -270,12 +270,19 @@ class ProtocolBrowseRepository {
     return page.objs;
   }
 
-  Future<ThreadPageData> threadPage(int tid, {int pn = 1}) async {
+  Future<ThreadPageData> threadPage(
+    int tid, {
+    int pn = 1,
+    bool descending = false,
+    bool onlyAuthor = false,
+  }) async {
     final page = await fetchPosts(
       _core,
       tid: tid,
       pn: pn,
       rn: 20,
+      sort: descending ? PostSortType.desc : PostSortType.asc,
+      onlyThreadAuthor: onlyAuthor,
       withComments: true,
       commentRn: 4,
     );
