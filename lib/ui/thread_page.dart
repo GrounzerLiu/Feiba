@@ -18,6 +18,8 @@ import 'widgets/level_badge.dart';
 import 'widgets/loading_indicator.dart';
 import 'widgets/forum_chip.dart';
 
+const double kThreadPageMaxWidth = 1040;
+
 class ThreadPage extends StatefulWidget {
   const ThreadPage({
     super.key,
@@ -230,9 +232,15 @@ class _ThreadPageState extends State<ThreadPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () => _load(reset: true),
-        child: _buildBody(theme),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: kThreadPageMaxWidth),
+          child: RefreshIndicator(
+            onRefresh: () => _load(reset: true),
+            child: _buildBody(theme),
+          ),
+        ),
       ),
       bottomNavigationBar: SafeArea(
         top: false,
@@ -244,10 +252,15 @@ class _ThreadPageState extends State<ThreadPage> {
               top: BorderSide(color: theme.colorScheme.outlineVariant),
             ),
           ),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Material(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: kThreadPageMaxWidth,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Material(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(22),
                   child: InkWell(
@@ -269,16 +282,18 @@ class _ThreadPageState extends State<ThreadPage> {
                 ),
               ),
               const SizedBox(width: 10),
-              IconButton.filledTonal(
-                tooltip: _liked ? '取消点赞' : '点赞',
-                onPressed: _requireLoginForLike,
-                icon: Icon(
-                  _liked
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                ),
+                  IconButton.filledTonal(
+                    tooltip: _liked ? '取消点赞' : '点赞',
+                    onPressed: _requireLoginForLike,
+                    icon: Icon(
+                      _liked
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
