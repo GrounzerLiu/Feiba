@@ -44,6 +44,10 @@ class _ForumPageState extends State<ForumPage> {
   @override
   void initState() {
     super.initState();
+    final cached = LocalLibrary.instance.forumPaletteByName(widget.forumName);
+    if (cached != null && cached.length >= 2) {
+      _headerColors = cached.map((value) => Color(value)).toList();
+    }
     _scroll.addListener(_onScroll);
     _load(reset: true);
   }
@@ -112,7 +116,8 @@ class _ForumPageState extends State<ForumPage> {
     if (url == null || url.isEmpty || _paletteUrl == url) return;
     _paletteUrl = url;
 
-    final saved = LocalLibrary.instance.forumPalette(url);
+    final saved = LocalLibrary.instance.forumPaletteByName(widget.forumName) ??
+        LocalLibrary.instance.forumPalette(url);
     if (saved != null && saved.length >= 2) {
       if (mounted) {
         setState(() {
@@ -136,6 +141,7 @@ class _ForumPageState extends State<ForumPage> {
       await LocalLibrary.instance.setForumPalette(
         url,
         colors.map((color) => color.toARGB32()).toList(growable: false),
+        forumName: widget.forumName,
       );
       if (mounted && _paletteUrl == url) {
         setState(() => _headerColors = colors);

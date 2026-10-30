@@ -99,11 +99,21 @@ class LocalLibrary extends ChangeNotifier {
 
   int? forumVisitedAt(String name) => _forumVisits[name.trim()];
 
-  List<int>? forumPalette(String avatarUrl) => _forumPalettes[avatarUrl];
+  List<int>? forumPalette(String avatarUrl) =>
+      _forumPalettes['url:$avatarUrl'];
 
-  Future<void> setForumPalette(String avatarUrl, List<int> colors) async {
+  List<int>? forumPaletteByName(String forumName) =>
+      _forumPalettes['name:${forumName.trim()}'];
+
+  Future<void> setForumPalette(
+    String avatarUrl,
+    List<int> colors, {
+    String? forumName,
+  }) async {
     if (avatarUrl.isEmpty || colors.length < 2) return;
-    _forumPalettes[avatarUrl] = colors;
+    _forumPalettes['url:$avatarUrl'] = colors;
+    final name = forumName?.trim() ?? '';
+    if (name.isNotEmpty) _forumPalettes['name:$name'] = colors;
     if (_forumPalettes.length > 100) {
       _forumPalettes.remove(_forumPalettes.keys.first);
     }
