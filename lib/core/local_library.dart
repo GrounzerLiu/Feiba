@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'image_cache.dart';
+
 /// A thread remembered locally so guests can keep reading history and
 /// favorites without an account.
 @immutable
@@ -119,6 +121,29 @@ class LocalLibrary extends ChangeNotifier {
       return base64Decode(raw);
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<void> preloadForumAvatarBytes() async {
+    var changed = false;
+    for (final entry in _forumAvatars.entries) {
+      if (_forumAvatarBytes.containsKey(entry.key)) continue;
+      try {
+        final info = await FeibaImageCache.managerFor(entry.value).getFileFromCache(
+          entry.value,
+        );
+        final file = info?.file;
+        if (file == null) continue;
+        final bytes = await file.readAsBytes();
+        if (bytes.isEmpty) continue;
+        _forumAvatarBytes[entry.key] = base64Encode(bytes);
+        changed = true;
+      } catch (_) {
+        // The image widget still has its network fallback.
+      }
+    }
+    if (changed) {
+      await _persistStringMap(_forumAvatarBytesKey, _forumAvatarBytes);
     }
   }
 
