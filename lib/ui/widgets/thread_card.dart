@@ -37,7 +37,6 @@ class ThreadCard extends StatelessWidget {
     final theme = Theme.of(context);
     final images = thread.content
         .where((ContentNode n) => n.isImage && n.imageUrl != null)
-        .map((ContentNode n) => n.imageUrl!)
         .toList(growable: false);
     final preview = thread.preview.trim();
     final name = authorName?.isNotEmpty == true
@@ -118,7 +117,7 @@ class ThreadCard extends StatelessWidget {
               ],
               if (images.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 10),
-                _ImageStrip(urls: images),
+                _ImageStrip(nodes: images),
               ],
               const SizedBox(height: 10),
               Row(
@@ -244,73 +243,111 @@ class _Metric extends StatelessWidget {
 }
 
 class _ImageStrip extends StatelessWidget {
-  const _ImageStrip({required this.urls});
+  const _ImageStrip({required this.nodes});
 
-  final List<String> urls;
+  final List<ContentNode> nodes;
 
   @override
   Widget build(BuildContext context) {
-    const double height = 92;
-    final items = urls.take(3).toList(growable: false);
-    return SizedBox(
-      height: height,
-      child: Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (nodes.length == 1) {
+          final node = nodes.first;
+          final ratio =
+              (node.width != null &&
+                  node.height != null &&
+                  node.width! > 0 &&
+                  node.height! > 0)
+              ? node.width! / node.height!
+              : 4 / 3;
+          final imageWidth = constraints.maxWidth.clamp(0.0, 320.0);
+          final imageHeight = (imageWidth / ratio).clamp(120.0, 260.0);
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: imageWidth,
+              height: imageHeight,
+              child: _image(context, node, borderRadius: 12),
+            ),
+          );
+        }
+
+        const double gap = 6;
+        const double height = 112;
+        final items = nodes.take(3).toList(growable: false);
+        return SizedBox(
+          height: height,
+          child: Row(
+            children: <Widget>[
+              for (var i = 0; i < items.length; i++) ...<Widget>[
+                if (i > 0) const SizedBox(width: gap),
+                Expanded(
+                  child: _image(
+                    context,
+                    items[i],
+                    borderRadius: 10,
+                    overlay: i == items.length - 1 && nodes.length > items.length
+                        ? '+${nodes.length - items.length}'
+                        : null,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _image(
+    BuildContext context,
+    ContentNode node, {
+    required double borderRadius,
+    String? overlay,
+  }) {
+    final url = node.imageUrl!;
+    final theme = Theme.of(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: Stack(
+        fit: StackFit.expand,
         children: <Widget>[
-          for (var i = 0; i < items.length; i++) ...<Widget>[
-            if (i > 0) const SizedBox(width: 6),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    CachedNetworkImage(
-                      imageUrl: items[i],
-                      cacheManager: Platform.isWindows
-                          ? null
-                          : FeibaImageCache.managerFor(items[i]),
-                      fit: BoxFit.cover,
-                      fadeInDuration: const Duration(milliseconds: 120),
-                      placeholder: (_, _) => Container(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                      ),
-                      errorWidget: (_, _, _) => Image.network(
-                        items[i],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            size: 20,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (i == 2 && urls.length > 3)
-                      Container(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '+${urls.length - 3}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                  ],
+          CachedNetworkImage(
+            imageUrl: url,
+            cacheManager: Platform.isWindows
+                ? null
+                : FeibaImageCache.managerFor(url),
+            fit: BoxFit.cover,
+            fadeInDuration: const Duration(milliseconds: 120),
+            placeholder: (_, _) => Container(
+              color: theme.colorScheme.surfaceContainerHighest,
+            ),
+            errorWidget: (_, _, _) => Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
-          ],
+          ),
+          if (overlay != null)
+            Container(
+              color: Colors.black.withValues(alpha: 0.45),
+              alignment: Alignment.center,
+              child: Text(
+                overlay,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
         ],
       ),
     );
