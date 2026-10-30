@@ -247,6 +247,7 @@ class _ThreadPageState extends State<ThreadPage> {
             ),
           ),
           child: Center(
+            heightFactor: 1,
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 maxWidth: kThreadPageMaxWidth,
@@ -462,6 +463,7 @@ class _ThreadHeaderDelegate extends SliverPersistentHeaderDelegate {
       color: theme.colorScheme.surface,
       child: ClipRect(
         child: Stack(
+          fit: StackFit.expand,
           children: <Widget>[
             Positioned(
               top: statusBarHeight,
