@@ -292,7 +292,7 @@ class _ForumPageState extends State<ForumPage> {
               onPressed: _signForum,
               icon: const Icon(Icons.how_to_reg_outlined),
             ),
-          IconButton.filledTonal(
+          IconButton(
             tooltip: '榜单',
             onPressed: () {
               Navigator.of(context).push(
