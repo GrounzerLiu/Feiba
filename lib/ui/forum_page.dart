@@ -124,6 +124,13 @@ class _ForumPageState extends State<ForumPage> {
           _headerColors = saved.map((value) => Color(value)).toList();
         });
       }
+      if (LocalLibrary.instance.forumPaletteByName(widget.forumName) == null) {
+        await LocalLibrary.instance.setForumPalette(
+          url,
+          saved,
+          forumName: widget.forumName,
+        );
+      }
       return;
     }
 
@@ -403,7 +410,7 @@ class _ForumHeader extends StatelessWidget {
             ],
     );
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 450),
+      duration: Duration.zero,
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(

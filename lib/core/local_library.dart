@@ -100,7 +100,7 @@ class LocalLibrary extends ChangeNotifier {
   int? forumVisitedAt(String name) => _forumVisits[name.trim()];
 
   List<int>? forumPalette(String avatarUrl) =>
-      _forumPalettes['url:$avatarUrl'];
+      _forumPalettes['url:$avatarUrl'] ?? _forumPalettes[avatarUrl];
 
   List<int>? forumPaletteByName(String forumName) =>
       _forumPalettes['name:${forumName.trim()}'];
