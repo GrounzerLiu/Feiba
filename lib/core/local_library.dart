@@ -77,6 +77,7 @@ class LocalLibrary extends ChangeNotifier {
   static const String _forumVisitsKey = 'library_forum_visits_v1';
   static const String _forumPalettesKey = 'library_forum_palettes_v1';
   static const String _forumAvatarsKey = 'library_forum_avatars_v1';
+  static const String _forumAvatarBytesKey = 'library_forum_avatar_bytes_v1';
   static const int _historyLimit = 50;
   static const int _favoriteLimit = 100;
   static const int _recentForumLimit = 40;
@@ -89,6 +90,7 @@ class LocalLibrary extends ChangeNotifier {
   final Map<String, int> _forumVisits = <String, int>{};
   final Map<String, List<int>> _forumPalettes = <String, List<int>>{};
   final Map<String, String> _forumAvatars = <String, String>{};
+  final Map<String, String> _forumAvatarBytes = <String, String>{};
   bool _loaded = false;
 
   List<LocalThread> get history => List<LocalThread>.unmodifiable(_history);
@@ -109,6 +111,29 @@ class LocalLibrary extends ChangeNotifier {
 
   String? forumAvatar(String forumName) =>
       _forumAvatars[forumName.trim()];
+
+  Uint8List? forumAvatarBytes(String forumName) {
+    final raw = _forumAvatarBytes[forumName.trim()];
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return base64Decode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setForumAvatarBytes(
+    String forumName,
+    Uint8List bytes,
+  ) async {
+    final name = forumName.trim();
+    if (name.isEmpty || bytes.isEmpty) return;
+    _forumAvatarBytes[name] = base64Encode(bytes);
+    if (_forumAvatarBytes.length > 50) {
+      _forumAvatarBytes.remove(_forumAvatarBytes.keys.first);
+    }
+    await _persistStringMap(_forumAvatarBytesKey, _forumAvatarBytes);
+  }
 
   Future<void> setForumAvatar(String forumName, String avatarUrl) async {
     final name = forumName.trim();
@@ -173,6 +198,9 @@ class LocalLibrary extends ChangeNotifier {
       _forumAvatars
         ..clear()
         ..addAll(_decodeStringMap(_prefs!.getString(_forumAvatarsKey)));
+      _forumAvatarBytes
+        ..clear()
+        ..addAll(_decodeStringMap(_prefs!.getString(_forumAvatarBytesKey)));
     } catch (_) {
       // In-memory mode: browsing still works in this run.
     }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,12 +11,14 @@ class NameAvatar extends StatelessWidget {
     super.key,
     required this.name,
     this.imageUrl,
+    this.imageBytes,
     this.size = 40,
     this.radius,
   });
 
   final String name;
   final String? imageUrl;
+  final Uint8List? imageBytes;
   final double size;
   final double? radius;
 
@@ -58,7 +62,15 @@ class NameAvatar extends StatelessWidget {
       ),
     );
     final url = imageUrl;
-    final image = url == null || url.isEmpty
+    final image = imageBytes != null && imageBytes!.isNotEmpty
+        ? Image.memory(
+            imageBytes!,
+            fit: BoxFit.cover,
+            width: size,
+            height: size,
+            gaplessPlayback: true,
+          )
+        : url == null || url.isEmpty
         ? null
         : _CachedAvatarImage(url: url, size: size);
     return Container(

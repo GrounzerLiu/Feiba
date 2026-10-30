@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:palette_generator/palette_generator.dart';
@@ -32,6 +34,7 @@ class _ForumPageState extends State<ForumPage> {
   final List<ThreadSummary> _threads = <ThreadSummary>[];
   TiebaForum? _forum;
   List<Color>? _headerColors;
+  Uint8List? _avatarBytes;
   String? _paletteUrl;
   Map<int, dynamic> _users = const <int, dynamic>{};
   int _page = 1;
@@ -48,6 +51,7 @@ class _ForumPageState extends State<ForumPage> {
     if (cached != null && cached.length >= 2) {
       _headerColors = cached.map((value) => Color(value)).toList();
     }
+    _avatarBytes = LocalLibrary.instance.forumAvatarBytes(widget.forumName);
     final cachedAvatar = LocalLibrary.instance.forumAvatar(widget.forumName);
     if (cachedAvatar != null && cachedAvatar.isNotEmpty) {
       _forum = TiebaForum(
@@ -102,6 +106,7 @@ class _ForumPageState extends State<ForumPage> {
       final avatar = data.forum?.avatar;
       if (avatar != null && avatar.isNotEmpty) {
         LocalLibrary.instance.setForumAvatar(widget.forumName, avatar);
+        _cacheAvatarBytes(avatar);
       }
       _loadHeaderPalette(data.forum);
       final fid = data.forum?.id ?? 0;
@@ -120,6 +125,20 @@ class _ForumPageState extends State<ForumPage> {
       setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _cacheAvatarBytes(String url) async {
+    try {
+      final manager = FeibaImageCache.managerFor(url);
+      final cached = await manager.getFileFromCache(url);
+      final file = cached?.file ?? await manager.getSingleFile(url);
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      await LocalLibrary.instance.setForumAvatarBytes(widget.forumName, bytes);
+      if (mounted) setState(() => _avatarBytes = bytes);
+    } catch (_) {
+      // The regular image loader remains the fallback.
     }
   }
 
@@ -294,6 +313,7 @@ class _ForumPageState extends State<ForumPage> {
                 child: _ForumHeader(
                   forum: _forum,
                   colors: _headerColors,
+                  avatarBytes: _avatarBytes,
                   fallbackName: widget.forumName,
                   followed: Session.instance.isLoggedIn
                       ? (_accountFollowed ?? false)
@@ -396,6 +416,7 @@ class _ForumHeader extends StatelessWidget {
     required this.forum,
     required this.fallbackName,
     this.colors,
+    this.avatarBytes,
     required this.followed,
     required this.onFollow,
   });
@@ -403,6 +424,7 @@ class _ForumHeader extends StatelessWidget {
   final TiebaForum? forum;
   final String fallbackName;
   final List<Color>? colors;
+  final Uint8List? avatarBytes;
   final bool followed;
   final VoidCallback onFollow;
 
@@ -444,7 +466,12 @@ class _ForumHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              NameAvatar(name: name, imageUrl: forum?.avatar, size: 54),
+              NameAvatar(
+                name: name,
+                imageUrl: forum?.avatar,
+                imageBytes: avatarBytes,
+                size: 54,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
