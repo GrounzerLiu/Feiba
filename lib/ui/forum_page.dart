@@ -292,7 +292,8 @@ class _ForumPageState extends State<ForumPage> {
               onPressed: _signForum,
               icon: const Icon(Icons.how_to_reg_outlined),
             ),
-          TextButton.icon(
+          IconButton.filledTonal(
+            tooltip: '榜单',
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -300,12 +301,7 @@ class _ForumPageState extends State<ForumPage> {
                 ),
               );
             },
-            icon: const Icon(Icons.emoji_events_outlined, size: 18),
-            label: const Text('榜单'),
-            style: TextButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-            ),
+            icon: const Icon(Icons.bar_chart_rounded, size: 20),
           ),
           IconButton(
             tooltip: '刷新',
