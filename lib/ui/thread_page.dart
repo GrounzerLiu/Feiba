@@ -232,17 +232,9 @@ class _ThreadPageState extends State<ThreadPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) => Center(
-          child: SizedBox(
-            width: constraints.maxWidth.clamp(0.0, kThreadPageMaxWidth),
-            height: constraints.maxHeight,
-            child: RefreshIndicator(
-              onRefresh: () => _load(reset: true),
-              child: _buildBody(theme),
-            ),
-          ),
-        ),
+      body: RefreshIndicator(
+        onRefresh: () => _load(reset: true),
+        child: _buildBody(theme),
       ),
       bottomNavigationBar: SafeArea(
         top: false,
@@ -381,18 +373,26 @@ class _ThreadPageState extends State<ThreadPage> {
             itemBuilder: (context, index) {
               final post = _posts[index];
               final author = _users[post.authorId];
-              return _PostCard(
-                post: post,
-                isOp: index == 0,
-                author: author,
-                onAuthorTap: author == null
-                    ? null
-                    : () => _openUser(post.authorId, author.displayName),
-                users: _users,
-                subs: post.subPosts,
-                onExpand: post.subPostNumber > 0 || post.subPosts.isNotEmpty
-                    ? () => _openSubPosts(post)
-                    : null,
+              return Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: kThreadPageMaxWidth,
+                  ),
+                  child: _PostCard(
+                    post: post,
+                    isOp: index == 0,
+                    author: author,
+                    onAuthorTap: author == null
+                        ? null
+                        : () => _openUser(post.authorId, author.displayName),
+                    users: _users,
+                    subs: post.subPosts,
+                    onExpand: post.subPostNumber > 0 || post.subPosts.isNotEmpty
+                        ? () => _openSubPosts(post)
+                        : null,
+                  ),
+                ),
               );
             },
           ),
