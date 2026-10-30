@@ -111,11 +111,15 @@ flutter build windows --debug       # 构建验证
 使用标准 NSIS 安装器，默认安装到 `C:\Program Files\Feiba`，需要管理员权限：
 
 ```bash
-flutter build windows --release
+flutter build windows --release --no-tree-shake-icons
 makensis tool/feiba_setup.nsi
 ```
 
-输出：`build/installer/Feiba-Setup-0.1.0.exe`。安装器创建开始菜单和桌面快捷方式，并注册卸载程序。
+输出：`build/installer/Feiba-Setup-0.1.0.exe`。
+
+> 使用 `--no-tree-shake-icons`，避免 `material_ui` 的图标裁剪漏掉新加入的 Material 图标。
+
+安装器创建开始菜单和桌面快捷方式，并注册卸载程序。
 安装包没有商业代码签名证书，Windows SmartScreen 会提示“未知发布者”；选择“运行”即可。
 
 ## 首页与帖子卡片
