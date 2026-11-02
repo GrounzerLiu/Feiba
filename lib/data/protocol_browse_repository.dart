@@ -280,9 +280,24 @@ class ProtocolBrowseRepository {
         : await fetchPersonalized(_core, page: page);
     if (source.isEmpty) {
       // Guest/empty recommendations fall back to the public hot list rather
-      // than showing an empty tab.
-      final hot = await fetchHotThreads(_core);
-      source = hot.threads;
+      // than showing an empty tab. Merge the hot sub-boards so the masonry
+      // wall has more than the four entries of the "all" board.
+      final first = await fetchHotThreads(_core);
+      final merged = <protocol_thread.TiebaThread>[...first.threads];
+      for (final tab in first.tabs) {
+        if (tab.code == 'all') continue;
+        try {
+          final page = await fetchHotThreads(_core, tabCode: tab.code);
+          merged.addAll(page.threads);
+        } catch (_) {
+          // One sub-board failure should not hide the rest.
+        }
+      }
+      final seen = <int>{};
+      source = merged
+          .where((thread) => thread.tid != 0 && seen.add(thread.tid))
+          .take(20)
+          .toList(growable: false);
     }
     final users = <int, TiebaUser>{};
     final threads = <ThreadSummary>[];
