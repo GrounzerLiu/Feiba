@@ -2,7 +2,7 @@ Unicode true
 !include "MUI2.nsh"
 
 !define APP_NAME "Feiba"
-!define APP_VERSION "0.1.3"
+!define APP_VERSION "0.1.4"
 !define APP_EXE "feiba.exe"
 !define SOURCE_DIR "..\build\windows\x64\runner\Release"
 !define OUTPUT_DIR "..\build\installer"
@@ -13,12 +13,12 @@ InstallDir "$PROGRAMFILES64\${APP_NAME}"
 InstallDirRegKey HKLM "Software\${APP_NAME}" "InstallDir"
 RequestExecutionLevel admin
 SetCompressor /SOLID lzma
-VIProductVersion "0.1.3.0"
+VIProductVersion "0.1.4.0"
 VIAddVersionKey "ProductName" "${APP_NAME}"
 VIAddVersionKey "CompanyName" "GrounzerLiu"
 VIAddVersionKey "FileDescription" "${APP_NAME} installer"
-VIAddVersionKey "FileVersion" "0.1.3.0"
-VIAddVersionKey "ProductVersion" "0.1.3.0"
+VIAddVersionKey "FileVersion" "0.1.4.0"
+VIAddVersionKey "ProductVersion" "0.1.4.0"
 VIAddVersionKey "LegalCopyright" "MIT"
 
 !define MUI_ICON "..\windows\runner\resources\app_icon.ico"

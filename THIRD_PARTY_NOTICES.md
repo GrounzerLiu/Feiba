@@ -22,6 +22,12 @@
 - xxHash：Yann Collet，BSD-2-Clause
 - 使用方式：算法语义参考并移植为 Dart（lib/protocol/core/crypto.dart）。
 
+## media_kit / libmpv
+
+- 项目：https://github.com/media-kit/media-kit
+- 许可证：media_kit 为 MIT；Windows/Android 原生播放库包含 libmpv（LGPL-2.1-or-later）
+- 使用方式：帖子视频的全屏播放；Windows 使用 libmpv-2.dll，Android 使用 libmpv 视频库。
+
 ## material_ui
 
 - 项目：https://pub.dev/packages/material_ui

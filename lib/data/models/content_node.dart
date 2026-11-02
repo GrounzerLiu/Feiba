@@ -11,6 +11,9 @@ class ContentNode {
     this.bsize,
     this.width,
     this.height,
+    this.videoUrl,
+    this.videoCover,
+    this.videoDuration = 0,
   });
 
   factory ContentNode.fromJson(Map<String, dynamic> json) {
@@ -43,8 +46,12 @@ class ContentNode {
   final String? bsize;
   final int? width;
   final int? height;
+  final String? videoUrl;
+  final String? videoCover;
+  final int videoDuration;
 
   bool get isImage => type == 3 && (cdnSrc != null || bigCdnSrc != null);
+  bool get isVideo => type == 5 && videoUrl != null && videoUrl!.isNotEmpty;
   bool get isEmoticon => type == 2;
   bool get isLink => link != null && link!.isNotEmpty;
 
@@ -61,6 +68,7 @@ class ContentNode {
   String get plainText {
     if (isEmoticon) return '[表情]';
     if (isImage) return '[图片]';
+    if (isVideo) return '[视频]';
     return text;
   }
 }

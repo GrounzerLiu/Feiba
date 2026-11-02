@@ -5,6 +5,7 @@ import '../../core/image_cache.dart';
 
 import '../../data/models/content_node.dart';
 import '../photo_view_page.dart';
+import '../video_page.dart';
 
 /// Renders Tieba rich content: text runs, links, emoticons and image grids.
 class ContentView extends StatelessWidget {
@@ -68,6 +69,17 @@ class ContentView extends StatelessWidget {
         pendingImages.add(node);
         continue;
       }
+      if (node.isVideo) {
+        if (pendingImages.isNotEmpty) flushImages();
+        flushInline();
+        blocks.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 4),
+            child: _VideoTile(node: node),
+          ),
+        );
+        continue;
+      }
       if (pendingImages.isNotEmpty) flushImages();
 
       if (node.isEmoticon) {
@@ -123,6 +135,116 @@ class ContentView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: blocks,
     );
+  }
+}
+
+class _VideoTile extends StatelessWidget {
+  const _VideoTile({required this.node});
+
+  final ContentNode node;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cover = node.videoCover;
+    final duration = _durationText(node.videoDuration);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final ratio =
+            (node.width != null && node.height != null && node.height! > 0)
+            ? node.width! / node.height!
+            : 16 / 9;
+        final desiredWidth = width > 360 ? 340.0 : width;
+        final height = (desiredWidth / ratio).clamp(150.0, 280.0);
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => VideoPage(
+                  url: node.videoUrl!,
+                  title: '视频',
+                  coverUrl: cover,
+                ),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: desiredWidth,
+                height: height,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    if (cover != null && cover.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: cover,
+                        cacheManager: FeibaImageCache.managerFor(cover),
+                        fit: BoxFit.cover,
+                        errorWidget: (_, _, _) => Container(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                        ),
+                      )
+                    else
+                      Container(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                      ),
+                    Container(color: Colors.black.withValues(alpha: 0.22)),
+                    const Center(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (duration.isNotEmpty)
+                      Positioned(
+                        right: 8,
+                        bottom: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            duration,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _durationText(int seconds) {
+    if (seconds <= 0) return '';
+    final minutes = seconds ~/ 60;
+    final remainder = (seconds % 60).toString().padLeft(2, '0');
+    return '${minutes.toString().padLeft(2, '0')}:$remainder';
   }
 }
 

@@ -589,7 +589,18 @@ class ProtocolBrowseRepository {
       } else if (fragment is protocol_contents.FragAt) {
         nodes.add(ContentNode(type: 0, text: fragment.text));
       } else if (fragment is protocol_contents.FragVideo) {
-        nodes.add(const ContentNode(type: 0, text: '[视频]'));
+        if (fragment.src.isEmpty) continue;
+        nodes.add(
+          ContentNode(
+            type: 5,
+            text: '[视频]',
+            videoUrl: fragment.src,
+            videoCover: fragment.coverSrc.isEmpty ? null : fragment.coverSrc,
+            videoDuration: fragment.duration,
+            width: fragment.width,
+            height: fragment.height,
+          ),
+        );
       } else if (fragment is protocol_contents.FragVoice) {
         nodes.add(const ContentNode(type: 0, text: '[语音]'));
       } else if (fragment is protocol_contents.FragTiebaPlus) {
