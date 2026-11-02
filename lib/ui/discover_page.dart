@@ -77,6 +77,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
     }
   }
 
+  void _ensureHotScroll() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hotScroll.hasClients || _loadingHotMore) return;
+      if (_hotScroll.position.maxScrollExtent <= 0 &&
+          _hotMoreTabs.isNotEmpty) {
+        _loadHotMore();
+      }
+    });
+  }
+
   Future<void> _loadRecommend({bool more = false}) async {
     if (!widget.loadFeed || _loadingRecommend || _loadingMore) return;
     if (more && !_recommendFeed.hasMore) return;
@@ -145,6 +155,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
             .where((code) => code != tabCode && code != 'all')
             .toList(growable: false);
       });
+      _ensureHotScroll();
     } catch (error) {
       if (!mounted) return;
       setState(() => _hotError = error.toString());
@@ -187,6 +198,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
           tabs: current.tabs,
         );
       });
+      _ensureHotScroll();
     } catch (_) {
       // A failed extra board keeps the current ranking visible.
     } finally {
@@ -315,11 +327,22 @@ class _DiscoverPageState extends State<DiscoverPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: <Widget>[
-          Text(
-            '按兴趣推荐的帖子',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          Row(
+            children: <Widget>[
+              Text(
+                '按兴趣推荐的帖子',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              if (_recommendFeed.hasMore && !_loadingMore)
+                TextButton.icon(
+                  onPressed: () => _loadRecommend(more: true),
+                  icon: const Icon(Icons.expand_more_rounded, size: 18),
+                  label: const Text('加载更多'),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
           if (_loadingRecommend && _recommendFeed.threads.isEmpty)
@@ -416,11 +439,22 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 ),
               ),
             const SizedBox(height: 8),
-            Text(
-              '按内容热度排序',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+            Row(
+              children: <Widget>[
+                Text(
+                  '按内容热度排序',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const Spacer(),
+                if (_hotMoreTabs.isNotEmpty && !_loadingHotMore)
+                  TextButton.icon(
+                    onPressed: _loadHotMore,
+                    icon: const Icon(Icons.expand_more_rounded, size: 18),
+                    label: const Text('加载更多'),
+                  ),
+              ],
             ),
             const SizedBox(height: 6),
             if (_loadingHot && board.feed.threads.isEmpty)

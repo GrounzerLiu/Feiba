@@ -319,6 +319,10 @@ class ProtocolBrowseRepository {
           .toList(growable: false);
     }
 
+    if (source.isEmpty && page > 1) {
+      source = await _hotForumFallback(page);
+    }
+
     final users = <int, TiebaUser>{};
     final threads = <ThreadSummary>[];
     for (final thread in source) {
@@ -329,8 +333,49 @@ class ProtocolBrowseRepository {
     return ThreadFeed(
       threads: threads,
       users: users,
-      hasMore: !usedFallback && page < 3 && threads.length >= 10,
+      hasMore: page < 3 && (usedFallback || threads.length >= 10),
     );
+  }
+
+  Future<List<protocol_thread.TiebaThread>> _hotForumFallback(int page) async {
+    try {
+      final square = await fetchSquareForums(
+        _core,
+        cname: '热门',
+        pn: page,
+        rn: 10,
+      );
+      final names = square.objs
+          .map((forum) => forum.fname)
+          .where((name) => name.isNotEmpty)
+          .take(3)
+          .toList(growable: false);
+      final feeds = await Future.wait<List<protocol_thread.TiebaThread>>(
+        names.map((name) async {
+          try {
+            final page = await fetchThreads(
+              _core,
+              fname: name,
+              pn: 1,
+              rn: 10,
+              sort: ThreadSortType.hot,
+            );
+            return page.objs;
+          } catch (_) {
+            return <protocol_thread.TiebaThread>[];
+          }
+        }),
+      );
+      final merged = <protocol_thread.TiebaThread>[
+        for (final feed in feeds) ...feed,
+      ];
+      final seen = <int>{};
+      return merged
+          .where((thread) => thread.tid != 0 && seen.add(thread.tid))
+          .toList(growable: false);
+    } catch (_) {
+      return const <protocol_thread.TiebaThread>[];
+    }
   }
 
   Future<HotBoard> hotBoard({String tabCode = 'all'}) async {
