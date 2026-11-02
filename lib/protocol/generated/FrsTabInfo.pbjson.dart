@@ -21,10 +21,11 @@ const FrsTabInfo$json = {
   '2': [
     {'1': 'tab_id', '3': 1, '4': 1, '5': 5, '10': 'tabId'},
     {'1': 'tab_name', '3': 3, '4': 1, '5': 9, '10': 'tabName'},
+    {'1': 'tab_code', '3': 8, '4': 1, '5': 9, '10': 'tabCode'},
   ],
 };
 
 /// Descriptor for `FrsTabInfo`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List frsTabInfoDescriptor = $convert.base64Decode(
     'CgpGcnNUYWJJbmZvEhUKBnRhYl9pZBgBIAEoBVIFdGFiSWQSGQoIdGFiX25hbWUYAyABKAlSB3'
-    'RhYk5hbWU=');
+    'RhYk5hbWUSGQoIdGFiX2NvZGUYCCABKAlSB3RhYkNvZGU=');

@@ -64,12 +64,10 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.explore_outlined));
     await tester.pumpAndSettle();
-    expect(find.text('话题'), findsOneWidget);
     expect(find.text('推荐'), findsOneWidget);
-    expect(find.text('热吧'), findsOneWidget);
-    expect(find.text('热帖'), findsOneWidget);
+    expect(find.text('热榜'), findsOneWidget);
     await tester.tap(find.text('推荐'));
     await tester.pumpAndSettle();
-    expect(find.text('游戏'), findsWidgets);
+    expect(find.text('按兴趣推荐的帖子'), findsOneWidget);
   });
 }

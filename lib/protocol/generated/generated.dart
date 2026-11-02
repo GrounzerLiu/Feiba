@@ -64,3 +64,6 @@ export 'UserPostReqIdl.pb.dart';
 export 'UserPostResIdl.pb.dart';
 export 'VideoInfo.pb.dart';
 export 'Voice.pb.dart';
+export 'HotThreadList.pb.dart';
+export 'Personalized.pb.dart';
+export 'RecommendTopicList.pb.dart';

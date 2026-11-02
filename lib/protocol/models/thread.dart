@@ -57,6 +57,7 @@ class ShareThread {
     required this.replyNum,
     required this.shareNum,
     required this.agree,
+    this.hotNum = 0,
     required this.disagree,
     required this.isDeleted,
   });
@@ -72,6 +73,7 @@ class ShareThread {
   final int replyNum;
   final int shareNum;
   final int agree;
+  final int hotNum;
   final int disagree;
   final bool isDeleted;
 
@@ -123,6 +125,7 @@ class TiebaThread {
     required this.replyNum,
     required this.shareNum,
     required this.agree,
+    this.hotNum = 0,
     required this.disagree,
     required this.collectNum,
     required this.validPostNum,
@@ -155,6 +158,7 @@ class TiebaThread {
   final int replyNum;
   final int shareNum;
   final int agree;
+  final int hotNum;
   final int disagree;
   final int collectNum;
   final int validPostNum;

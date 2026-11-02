@@ -20,10 +20,12 @@ class FrsTabInfo extends $pb.GeneratedMessage {
   factory FrsTabInfo({
     $core.int? tabId,
     $core.String? tabName,
+    $core.String? tabCode,
   }) {
     final result = FrsTabInfo._();
     if (tabId != null) result.tabId = tabId;
     if (tabName != null) result.tabName = tabName;
+    if (tabCode != null) result.tabCode = tabCode;
     return result;
   }
 
@@ -41,6 +43,7 @@ class FrsTabInfo extends $pb.GeneratedMessage {
       createEmptyInstance: FrsTabInfo.$_createMessage)
     ..aI(1, _omitFieldNames ? '' : 'tabId')
     ..aOS(3, _omitFieldNames ? '' : 'tabName')
+    ..aOS(8, _omitFieldNames ? '' : 'tabCode')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -80,6 +83,15 @@ class FrsTabInfo extends $pb.GeneratedMessage {
   $core.bool hasTabName() => $_has(1);
   @$pb.TagNumber(3)
   void clearTabName() => $_clearField(3);
+
+  @$pb.TagNumber(8)
+  $core.String get tabCode => $_getSZ(2);
+  @$pb.TagNumber(8)
+  set tabCode($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(8)
+  $core.bool hasTabCode() => $_has(2);
+  @$pb.TagNumber(8)
+  void clearTabCode() => $_clearField(8);
 }
 
 const $core.bool _omitFieldNames =

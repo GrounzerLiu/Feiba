@@ -3,6 +3,7 @@ import '../protocol/api/forum_extra.dart' show fetchForumLevel;
 import '../protocol/api/get_fans.dart';
 import '../protocol/api/get_fid.dart';
 import '../protocol/api/get_follows.dart';
+import '../protocol/api/get_personalized.dart';
 import '../protocol/api/get_self_follow_forums.dart';
 import '../protocol/api/get_replies.dart';
 import '../protocol/api/get_user_forum_info.dart';
@@ -22,6 +23,7 @@ import '../protocol/models/follow.dart';
 import '../protocol/models/notification.dart';
 import '../protocol/models/self_forums.dart';
 import '../protocol/models/user_forum_info.dart';
+import '../protocol/models/thread.dart' as protocol_thread;
 import '../protocol/models/user.dart' as protocol;
 import 'session.dart';
 
@@ -113,6 +115,13 @@ class TiebaApi {
     }
     _self = user;
     return user;
+  }
+
+  Future<List<protocol_thread.TiebaThread>> personalizedThreads({
+    int page = 1,
+  }) async {
+    final http = await _ensure();
+    return fetchPersonalized(http, page: page);
   }
 
   Future<List<SelfFollowForum>> followedForums() async {

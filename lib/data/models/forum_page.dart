@@ -39,6 +39,7 @@ class ThreadSummary {
     this.replyNum = 0,
     this.viewNum = 0,
     this.agreeNum = 0,
+    this.hotNum = 0,
     this.authorId = 0,
     this.createTime = 0,
     this.lastTime = 0,
@@ -74,6 +75,7 @@ class ThreadSummary {
   final int replyNum;
   final int viewNum;
   final int agreeNum;
+  final int hotNum;
   final int authorId;
   final int createTime;
   final int lastTime;

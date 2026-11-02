@@ -1,22 +1,21 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
-
-import '../core/image_cache.dart';
 
 import '../data/models/feed.dart';
 import '../data/models/forum_page.dart';
-import '../data/models/forum_summary.dart';
+import '../data/models/hot_board.dart';
 import '../data/models/hot_topic.dart';
 import '../data/models/tieba_user.dart';
 import '../data/protocol_browse_repository.dart';
 import 'format.dart';
 import 'forum_page.dart';
+import 'route_transitions.dart';
 import 'search_page.dart';
-import 'widgets/forum_avatar.dart';
-import 'widgets/forum_open_container.dart';
-import 'widgets/morphing_shape.dart';
-import 'widgets/thread_grid.dart';
+import 'thread_page.dart';
+import 'widgets/forum_chip.dart';
 import 'widgets/loading_indicator.dart';
+import 'widgets/morphing_shape.dart';
+import 'widgets/name_avatar.dart';
+import 'widgets/thread_grid.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key, this.loadFeed = true});
@@ -30,134 +29,92 @@ class DiscoverPage extends StatefulWidget {
 class _DiscoverPageState extends State<DiscoverPage> {
   final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
 
-  static const List<_Category> _categories = <_Category>[
-    _Category('游戏', Icons.sports_esports_rounded, Color(0xFF5B8DEF)),
-    _Category('动漫', Icons.auto_awesome_rounded, Color(0xFF8A6BE8)),
-    _Category('数码', Icons.devices_rounded, Color(0xFF3FAE8F)),
-    _Category('体育', Icons.sports_basketball_rounded, Color(0xFFE08A4D)),
-    _Category('摄影', Icons.camera_alt_rounded, Color(0xFF4C9DBD)),
-    _Category('旅游', Icons.flight_takeoff_rounded, Color(0xFFD9647A)),
-    _Category('娱乐', Icons.local_fire_department_rounded, Color(0xFFC76A9E)),
-  ];
-
-  List<ForumSummary> _hotForums = const <ForumSummary>[];
-  List<HotTopic> _topics = const <HotTopic>[];
-  List<ForumSummary> _recommended = const <ForumSummary>[];
-  ThreadFeed _hotFeed = ThreadFeed.empty;
-  String _category = '游戏';
-  bool _loading = false;
-  bool _categoryLoading = false;
-  String? _error;
+  ThreadFeed _recommendFeed = ThreadFeed.empty;
+  HotBoard? _hotBoard;
+  bool _loadingRecommend = false;
+  bool _loadingHot = false;
+  String? _recommendError;
+  String? _hotError;
+  String _hotTab = 'all';
 
   @override
   void initState() {
     super.initState();
-    if (widget.loadFeed) _load();
+    if (widget.loadFeed) {
+      _loadRecommend();
+      _loadHot(_hotTab);
+    }
   }
 
-  Future<void> _load() async {
-    if (!widget.loadFeed || _loading) return;
+  Future<void> _loadRecommend() async {
+    if (!widget.loadFeed || _loadingRecommend) return;
     setState(() {
-      _loading = true;
-      _error = null;
-    });
-    List<ForumSummary> hot = const <ForumSummary>[];
-    List<HotTopic> topics = const <HotTopic>[];
-    List<ForumSummary> recommended = const <ForumSummary>[];
-    ThreadFeed hotFeed = ThreadFeed.empty;
-    Object? failure;
-
-    try {
-      final page = await _repo.squareForums('热门', rn: 10);
-      hot = page.items;
-    } catch (error) {
-      failure = error;
-    }
-    try {
-      topics = await _repo.hotTopics();
-    } catch (error) {
-      failure ??= error;
-    }
-    try {
-      final page = await _repo.squareForums(_category, rn: 6);
-      recommended = page.items;
-    } catch (error) {
-      failure ??= error;
-    }
-
-    if (hot.isNotEmpty) {
-      final sources = hot.take(3).map((forum) => forum.name).toList();
-      final feeds = await Future.wait(
-        sources.map((name) async {
-          try {
-            return await _repo.forumFeed(name, limit: 10, hot: true);
-          } catch (_) {
-            return ThreadFeed.empty;
-          }
-        }),
-      );
-      final threads = <ThreadSummary>[];
-      final users = <int, TiebaUser>{};
-      final seen = <int>{};
-      for (final source in feeds) {
-        users.addAll(source.users);
-        for (final thread in source.threads) {
-          if (thread.tid == 0 || !seen.add(thread.tid)) continue;
-          threads.add(thread);
-        }
-      }
-      threads.sort((a, b) => b.replyNum.compareTo(a.replyNum));
-      hotFeed = ThreadFeed(
-        threads: threads.take(10).toList(growable: false),
-        users: users,
-      );
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _hotForums = hot;
-      _topics = topics;
-      _recommended = recommended;
-      _hotFeed = hotFeed;
-      _loading = false;
-      _error =
-          hot.isEmpty &&
-              topics.isEmpty &&
-              recommended.isEmpty &&
-              failure != null
-          ? failure.toString()
-          : null;
-    });
-  }
-
-  Future<void> _selectCategory(String category) async {
-    if (category == _category) return;
-    setState(() {
-      _category = category;
-      _categoryLoading = true;
-      _recommended = const <ForumSummary>[];
+      _loadingRecommend = true;
+      _recommendError = null;
     });
     try {
-      final page = await _repo.squareForums(category, rn: 6);
+      final feed = await _repo.personalizedFeed();
       if (!mounted) return;
-      setState(() => _recommended = page.items);
-    } catch (_) {
+      setState(() => _recommendFeed = feed);
+    } catch (error) {
       if (!mounted) return;
-      setState(() => _recommended = const <ForumSummary>[]);
+      setState(() => _recommendError = error.toString());
     } finally {
-      if (mounted) setState(() => _categoryLoading = false);
+      if (mounted) setState(() => _loadingRecommend = false);
     }
   }
 
-  void _openForum(String name) => Navigator.of(
-    context,
-  ).push(MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)));
+  Future<void> _loadHot(String tabCode) async {
+    if (!widget.loadFeed || _loadingHot) return;
+    setState(() {
+      _loadingHot = true;
+      _hotError = null;
+      _hotTab = tabCode;
+    });
+    try {
+      final board = await _repo.hotBoard(tabCode: tabCode);
+      if (!mounted) return;
+      setState(() => _hotBoard = board);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _hotError = error.toString());
+    } finally {
+      if (mounted) setState(() => _loadingHot = false);
+    }
+  }
+
+  Future<void> _refreshHot() => _loadHot(_hotTab);
+
+  void _openForum(String name) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ForumPage(forumName: name)),
+    );
+  }
+
+  void _openThread(ThreadSummary thread) {
+    Navigator.of(context).push(
+      threadPageRoute<void>(
+        ThreadPage(
+          tid: thread.tid,
+          forumName: thread.forumName.isEmpty ? null : thread.forumName,
+        ),
+      ),
+    );
+  }
+
+  void _openTopic(HotTopic topic) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SearchPage(initialKeyword: topic.name),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return DefaultTabController(
-      length: 4,
+      length: 2,
       child: Scaffold(
         body: Column(
           children: <Widget>[
@@ -189,7 +146,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                           Text('广场', style: theme.textTheme.headlineSmall),
                           const SizedBox(height: 3),
                           Text(
-                            '话题榜、推荐、热吧和热帖',
+                            '推荐帖子、热榜话题和热门吧',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -208,31 +165,30 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     ),
                     IconButton(
                       tooltip: '刷新',
-                      onPressed: _load,
+                      onPressed: () {
+                        _loadRecommend();
+                        _refreshHot();
+                      },
                       icon: const Icon(Icons.refresh_rounded),
                     ),
                   ],
                 ),
               ),
             ),
-            const TabBar(
-              labelStyle: TextStyle(fontWeight: FontWeight.w700),
-              unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500),
+            TabBar(
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
               dividerColor: Colors.transparent,
-              tabs: <Widget>[
-                Tab(text: '话题'),
+              tabs: const <Widget>[
                 Tab(text: '推荐'),
-                Tab(text: '热吧'),
-                Tab(text: '热帖'),
+                Tab(text: '热榜'),
               ],
             ),
             Expanded(
               child: TabBarView(
                 children: <Widget>[
-                  _topicTab(),
-                  _recommendTab(),
-                  _forumRankTab(),
-                  _hotPostsTab(),
+                  _recommendTab(theme),
+                  _hotTabView(theme),
                 ],
               ),
             ),
@@ -242,480 +198,355 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  Widget _topicTab() {
-    final theme = Theme.of(context);
+  Widget _recommendTab(ThemeData theme) {
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: _loadRecommend,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-            child: Text(
-              '来自贴吧话题榜的真实排名',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+          Text(
+            '按兴趣推荐的帖子',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          if (_loading && _topics.isEmpty)
-            const LoadingIndicator()
-          else if (_topics.isEmpty)
-            const _EmptyCard(text: '话题榜暂时没有数据。')
+          const SizedBox(height: 8),
+          if (_loadingRecommend && _recommendFeed.threads.isEmpty)
+            const LoadingIndicator(minHeight: 260)
+          else if (_recommendError != null && _recommendFeed.threads.isEmpty)
+            _ErrorCard(message: _recommendError!, onRetry: _loadRecommend)
+          else if (_recommendFeed.threads.isEmpty)
+            const _EmptyCard(text: '暂时没有推荐帖子。')
           else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 520,
-                mainAxisExtent: 136,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-              ),
-              itemCount: _topics.length,
-              itemBuilder: (context, index) {
-                final topic = _topics[index];
-                return _HotTopicCard(
-                  topic: topic,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => SearchPage(initialKeyword: topic.name),
+            ThreadGrid(feed: _recommendFeed, repo: _repo),
+        ],
+      ),
+    );
+  }
+
+  Widget _hotTabView(ThemeData theme) {
+    final board = _hotBoard;
+    return RefreshIndicator(
+      onRefresh: _refreshHot,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+        children: <Widget>[
+          if (_loadingHot && board == null)
+            const LoadingIndicator(minHeight: 280)
+          else if (_hotError != null && board == null)
+            _ErrorCard(message: _hotError!, onRetry: _refreshHot)
+          else if (board == null)
+            const _EmptyCard(text: '热榜暂时没有数据。')
+          else ...<Widget>[
+            if (board.topics.isNotEmpty) ...<Widget>[
+              Row(
+                children: <Widget>[
+                  Text(
+                    '话题榜',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _forumRankTab() {
-    final theme = Theme.of(context);
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-            child: Text(
-              '来自吧广场热门分类，按当前热度排序',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          if (_loading && _hotForums.isEmpty)
-            const LoadingIndicator()
-          else if (_error != null && _hotForums.isEmpty)
-            _ErrorCard(message: _error!, onRetry: _load)
-          else if (_hotForums.isEmpty)
-            const _EmptyCard(text: '热门吧暂时没有数据。')
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 520,
-                mainAxisExtent: 72,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-              ),
-              itemCount: _hotForums.length,
-              itemBuilder: (context, index) {
-                final forum = _hotForums[index];
-                return ForumOpenContainer(
-                  key: ValueKey<String>('hot-forum-${forum.name}'),
-                  closedBuilder: (context, open) => _HotForumCard(
-                    rank: index + 1,
-                    repo: _repo,
-                    forum: forum,
-                    onTap: open,
+                  const SizedBox(width: 8),
+                  Text(
+                    '实时讨论',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  openBuilder: (context) =>
-                      ForumPage(forumName: forum.name),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _recommendTab() {
-    final theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-      children: <Widget>[
-        Text(
-          '按分类发现真实贴吧',
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            for (final category in _categories)
-              ChoiceChip(
-                avatar: Icon(
-                  category.icon,
-                  size: 16,
-                  color: _category == category.title
-                      ? theme.colorScheme.onSecondaryContainer
-                      : category.color,
-                ),
-                label: Text(category.title),
-                selected: _category == category.title,
-                onSelected: (_) => _selectCategory(category.title),
+                  const Spacer(),
+                  if (_loadingHot)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
               ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (_categoryLoading)
-          const LoadingIndicator()
-        else if (_recommended.isEmpty)
-          const _EmptyCard(text: '这个分类暂时没有推荐吧。')
-        else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 320,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              mainAxisExtent: 64,
-            ),
-            itemCount: _recommended.length,
-            itemBuilder: (context, index) {
-              final forum = _recommended[index];
-              return _RecommendedForumCard(
-                repo: _repo,
-                forum: forum,
-                onTap: () => _openForum(forum.name),
-              );
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _hotPostsTab() {
-    final theme = Theme.of(context);
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-            child: Text(
-              '热门吧里正在被回复的帖子',
+              const SizedBox(height: 8),
+              _TopicGrid(
+                topics: board.topics.take(8).toList(growable: false),
+                onTap: _openTopic,
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 10),
+            ],
+            if (board.tabs.length > 1)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: <Widget>[
+                    for (final tab in board.tabs) ...<Widget>[
+                      if (tab.code != board.tabs.first.code)
+                        const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: Text(tab.name),
+                        selected: _hotTab == tab.code,
+                        onSelected: (_) => _loadHot(tab.code),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
+            Text(
+              '按内容热度排序',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-          ),
-          if (_loading && _hotFeed.threads.isEmpty)
-            const LoadingIndicator(minHeight: 220)
-          else if (_hotFeed.threads.isEmpty)
-            const _EmptyCard(text: '热帖暂时没有数据。')
-          else
-            ThreadGrid(
-              feed: _hotFeed,
-              repo: _repo,
-            ),
+            const SizedBox(height: 6),
+            if (_loadingHot && board.feed.threads.isEmpty)
+              const LoadingIndicator(minHeight: 220)
+            else if (board.feed.threads.isEmpty)
+              const _EmptyCard(text: '这个榜单暂时没有帖子。')
+            else
+              for (var index = 0; index < board.feed.threads.length; index++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _HotThreadCard(
+                    rank: index + 1,
+                    thread: board.feed.threads[index],
+                    author: board.feed.users[board.feed.threads[index].authorId],
+                    repo: _repo,
+                    onTap: () => _openThread(board.feed.threads[index]),
+                    onForumTap: _openForum,
+                  ),
+                ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _HotTopicCard extends StatelessWidget {
-  const _HotTopicCard({required this.topic, required this.onTap});
+class _TopicGrid extends StatelessWidget {
+  const _TopicGrid({required this.topics, required this.onTap});
 
-  final HotTopic topic;
-  final VoidCallback onTap;
+  final List<HotTopic> topics;
+  final ValueChanged<HotTopic> onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final image = topic.imageUrl;
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: topics.length,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 360,
+        mainAxisExtent: 38,
+        mainAxisSpacing: 4,
+        crossAxisSpacing: 12,
+      ),
+      itemBuilder: (context, index) {
+        final topic = topics[index];
+        final rank = topic.rank > 0 ? topic.rank : index + 1;
+        final rankColor = rank == 1
+            ? theme.colorScheme.error
+            : rank == 2
+            ? const Color(0xFFE07A2E)
+            : rank == 3
+            ? const Color(0xFFC49A16)
+            : theme.colorScheme.onSurfaceVariant;
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => onTap(topic),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               SizedBox(
-                width: 26,
+                width: 22,
                 child: Text(
-                  '${topic.rank}',
-                  textAlign: TextAlign.center,
+                  rank.toString(),
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: topic.rank <= 3
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
+                    color: rankColor,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      topic.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
-                      ),
-                    ),
-                    if (topic.description.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 4),
-                      Text(
-                        topic.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 6),
-                    Row(
-                      children: <Widget>[
-                        if (topic.discussNum > 0)
-                          Text(
-                            '${compactCount(topic.discussNum)} 讨论',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        if (topic.isVideo) ...<Widget>[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.play_circle_outline_rounded,
-                            size: 14,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '视频',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  topic.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
                 ),
               ),
-              if (image != null && image.isNotEmpty) ...<Widget>[
-                const SizedBox(width: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: CachedNetworkImage(
-                    imageUrl: image,
-                    cacheManager: FeibaImageCache.managerFor(image),
-                    width: 62,
-                    height: 62,
-                    fit: BoxFit.cover,
-                    fadeInDuration: const Duration(milliseconds: 120),
-                    placeholder: (_, _) =>
-                        const SizedBox(width: 62, height: 62),
-                    errorWidget: (_, _, _) => Image.network(
-                      image,
-                      width: 62,
-                      height: 62,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          const SizedBox(width: 62, height: 62),
-                    ),
-                  ),
-                ),
-              ],
+              if (topic.tag == 2)
+                _TopicTag(text: '热', color: theme.colorScheme.error)
+              else if (topic.tag == 1)
+                _TopicTag(text: '新', color: const Color(0xFFE07A2E)),
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+class _TopicTag extends StatelessWidget {
+  const _TopicTag({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 }
 
-class _HotForumCard extends StatelessWidget {
-  const _HotForumCard({
+class _HotThreadCard extends StatelessWidget {
+  const _HotThreadCard({
     required this.rank,
+    required this.thread,
+    required this.author,
     required this.repo,
-    required this.forum,
     required this.onTap,
+    required this.onForumTap,
   });
 
   final int rank;
+  final ThreadSummary thread;
+  final TiebaUser? author;
   final ProtocolBrowseRepository repo;
-  final ForumSummary forum;
   final VoidCallback onTap;
+  final ValueChanged<String> onForumTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final detail = forum.memberNum > 0
-        ? '${compactCount(forum.memberNum)} 成员'
-        : forum.threadNum > 0
-        ? '${compactCount(forum.threadNum)} 帖子'
-        : '进入贴吧';
+    final name = author?.displayName ?? '贴吧用户';
+    final heat = thread.hotNum > 0 ? thread.hotNum : thread.viewNum;
     return Material(
       color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              SizedBox(
-                width: 28,
-                child: Text(
-                  '$rank',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: rank <= 3
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
+              Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 22,
+                    child: Text(
+                      rank.toString(),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: rank <= 3
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              ForumAvatar(name: forum.name, repo: repo, size: 40),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      forum.name,
+                  NameAvatar(
+                    name: name,
+                    imageUrl: author?.avatarUrl,
+                    size: 26,
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: 2),
+                  ),
+                  if (heat > 0)
                     Text(
-                      detail,
+                      '${compactCount(heat)} 热度',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  ],
+                ],
+              ),
+              const SizedBox(height: 7),
+              Text(
+                thread.title.isEmpty ? '无标题' : thread.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
                 ),
               ),
-              if (forum.isFollowed)
-                Padding(
-                  padding: const EdgeInsets.only(right: 2),
-                  child: Text(
-                    '已关注',
+              if (thread.preview.trim().isNotEmpty) ...<Widget>[
+                const SizedBox(height: 4),
+                Text(
+                  thread.preview,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Row(
+                children: <Widget>[
+                  if (thread.forumName.isNotEmpty)
+                    Flexible(
+                      child: ForumChip(
+                        name: thread.forumName,
+                        repo: repo,
+                        dense: true,
+                        onPressed: () => onForumTap(thread.forumName),
+                      ),
+                    ),
+                  const Spacer(),
+                  Icon(
+                    Icons.mode_comment_outlined,
+                    size: 15,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    compactCount(thread.replyNum),
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.primary,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ),
-              const Icon(Icons.chevron_right_rounded),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RecommendedForumCard extends StatelessWidget {
-  const _RecommendedForumCard({
-    required this.repo,
-    required this.forum,
-    required this.onTap,
-  });
-
-  final ProtocolBrowseRepository repo;
-  final ForumSummary forum;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            children: <Widget>[
-              ForumAvatar(name: forum.name, repo: repo, size: 38),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Flexible(
-                          child: Text(
-                            forum.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        if (forum.isFollowed) ...<Widget>[
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.check_circle_rounded,
-                            size: 14,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ],
-                      ],
+                  const SizedBox(width: 12),
+                  Icon(
+                    Icons.favorite_border_rounded,
+                    size: 15,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    compactCount(thread.agreeNum),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      forum.memberNum > 0
-                          ? '${compactCount(forum.memberNum)} 成员'
-                          : '进入贴吧',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ],
               ),
             ],
           ),
@@ -784,12 +615,4 @@ class _ErrorCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Category {
-  const _Category(this.title, this.icon, this.color);
-
-  final String title;
-  final IconData icon;
-  final Color color;
 }

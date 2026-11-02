@@ -1,7 +1,10 @@
+import '../core/session.dart';
+import '../core/tieba_api.dart';
 import '../protocol/api/forum_extra.dart' show fetchSquareForums;
 import '../protocol/api/get_comments.dart';
 import '../protocol/api/get_forum.dart';
 import '../protocol/api/get_homepage.dart';
+import '../protocol/api/get_personalized.dart';
 import '../protocol/api/get_posts.dart';
 import '../protocol/api/get_threads.dart';
 import '../protocol/api/get_user_contents.dart';
@@ -22,6 +25,7 @@ import 'models/feed.dart';
 import 'models/forum_page.dart';
 import 'models/forum_search.dart';
 import 'models/forum_summary.dart';
+import 'models/hot_board.dart';
 import 'models/hot_topic.dart';
 import 'models/thread_page.dart';
 import 'models/tieba_user.dart';
@@ -270,6 +274,58 @@ class ProtocolBrowseRepository {
     return page.objs;
   }
 
+  Future<ThreadFeed> personalizedFeed({int page = 1}) async {
+    var source = Session.instance.isLoggedIn
+        ? await TiebaApi.instance.personalizedThreads(page: page)
+        : await fetchPersonalized(_core, page: page);
+    if (source.isEmpty) {
+      // Guest/empty recommendations fall back to the public hot list rather
+      // than showing an empty tab.
+      final hot = await fetchHotThreads(_core);
+      source = hot.threads;
+    }
+    final users = <int, TiebaUser>{};
+    final threads = <ThreadSummary>[];
+    for (final thread in source) {
+      final user = thread.user;
+      if (user != null) users[user.userId] = _mapUser(user);
+      threads.add(_mapThread(thread));
+    }
+    return ThreadFeed(threads: threads, users: users);
+  }
+
+  Future<HotBoard> hotBoard({String tabCode = 'all'}) async {
+    final page = await fetchHotThreads(_core, tabCode: tabCode);
+    final users = <int, TiebaUser>{};
+    final threads = <ThreadSummary>[];
+    for (final thread in page.threads) {
+      final user = thread.user;
+      if (user != null) users[user.userId] = _mapUser(user);
+      threads.add(_mapThread(thread));
+    }
+    return HotBoard(
+      feed: ThreadFeed(threads: threads, users: users),
+      topics: <HotTopic>[
+        for (var index = 0; index < page.topics.length; index++)
+          HotTopic(
+            id: page.topics[index].id,
+            name: page.topics[index].name,
+            description: page.topics[index].description,
+            discussNum: page.topics[index].discussNum,
+            imageUrl: page.topics[index].imageUrl,
+            rank: index + 1,
+            tag: page.topics[index].tag,
+          ),
+      ],
+      tabs: <HotTabOption>[
+        const HotTabOption(code: 'all', name: '总榜'),
+        for (final tab in page.tabs)
+          if (tab.code != 'all')
+            HotTabOption(code: tab.code, name: tab.name),
+      ],
+    );
+  }
+
   Future<ThreadPageData> threadPage(
     int tid, {
     int pn = 1,
@@ -366,6 +422,7 @@ class ProtocolBrowseRepository {
       replyNum: thread.replyNum,
       viewNum: thread.viewNum,
       agreeNum: thread.agree,
+      hotNum: thread.hotNum,
       authorId: thread.authorId,
       createTime: thread.createTime,
       lastTime: thread.lastTime,

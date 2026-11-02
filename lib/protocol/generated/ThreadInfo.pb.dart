@@ -296,6 +296,7 @@ class ThreadInfo extends $pb.GeneratedMessage {
     $core.int? isShareThread,
     $core.int? tabId,
     $core.int? isDeleted,
+    $core.int? hotNum,
     $core.int? collectNum,
     $core.int? isFrsMask,
   }) {
@@ -331,6 +332,7 @@ class ThreadInfo extends $pb.GeneratedMessage {
     if (isShareThread != null) result.isShareThread = isShareThread;
     if (tabId != null) result.tabId = tabId;
     if (isDeleted != null) result.isDeleted = isDeleted;
+    if (hotNum != null) result.hotNum = hotNum;
     if (collectNum != null) result.collectNum = collectNum;
     if (isFrsMask != null) result.isFrsMask = isFrsMask;
     return result;
@@ -388,6 +390,7 @@ class ThreadInfo extends $pb.GeneratedMessage {
     ..aI(143, _omitFieldNames ? '' : 'isShareThread')
     ..aI(175, _omitFieldNames ? '' : 'tabId')
     ..aI(181, _omitFieldNames ? '' : 'isDeleted')
+    ..aI(182, _omitFieldNames ? '' : 'hotNum')
     ..aI(190, _omitFieldNames ? '' : 'collectNum',
         fieldType: $pb.PbFieldType.OU3)
     ..aI(198, _omitFieldNames ? '' : 'isFrsMask')
@@ -684,21 +687,30 @@ class ThreadInfo extends $pb.GeneratedMessage {
   @$pb.TagNumber(181)
   void clearIsDeleted() => $_clearField(181);
 
+  @$pb.TagNumber(182)
+  $core.int get hotNum => $_getIZ(30);
+  @$pb.TagNumber(182)
+  set hotNum($core.int value) => $_setSignedInt32(30, value);
+  @$pb.TagNumber(182)
+  $core.bool hasHotNum() => $_has(30);
+  @$pb.TagNumber(182)
+  void clearHotNum() => $_clearField(182);
+
   @$pb.TagNumber(190)
-  $core.int get collectNum => $_getIZ(30);
+  $core.int get collectNum => $_getIZ(31);
   @$pb.TagNumber(190)
-  set collectNum($core.int value) => $_setUnsignedInt32(30, value);
+  set collectNum($core.int value) => $_setUnsignedInt32(31, value);
   @$pb.TagNumber(190)
-  $core.bool hasCollectNum() => $_has(30);
+  $core.bool hasCollectNum() => $_has(31);
   @$pb.TagNumber(190)
   void clearCollectNum() => $_clearField(190);
 
   @$pb.TagNumber(198)
-  $core.int get isFrsMask => $_getIZ(31);
+  $core.int get isFrsMask => $_getIZ(32);
   @$pb.TagNumber(198)
-  set isFrsMask($core.int value) => $_setSignedInt32(31, value);
+  set isFrsMask($core.int value) => $_setSignedInt32(32, value);
   @$pb.TagNumber(198)
-  $core.bool hasIsFrsMask() => $_has(31);
+  $core.bool hasIsFrsMask() => $_has(32);
   @$pb.TagNumber(198)
   void clearIsFrsMask() => $_clearField(198);
 }
