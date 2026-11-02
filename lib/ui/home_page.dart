@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
+import '../core/followed_forum_cache.dart';
 import '../core/local_library.dart';
 import '../core/session.dart';
 import '../core/tieba_api.dart';
@@ -58,6 +61,7 @@ class _HomePageState extends State<HomePage>
     super.initState();
     LocalLibrary.instance.addListener(_onLibraryChanged);
     _syncLocal();
+    _restoreCachedForums();
     if (widget.loadFeed) _load();
   }
 
@@ -147,6 +151,12 @@ class _HomePageState extends State<HomePage>
       }
       if (mounted && accountForums.isNotEmpty) {
         setState(() => _forums = accountForums);
+        unawaited(
+          FollowedForumCache.save(
+            forums: accountForums,
+            account: Session.instance.userName,
+          ),
+        );
       }
       try {
         final users = await TiebaApi.instance.followedUsers();
@@ -240,6 +250,19 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  Future<void> _restoreCachedForums() async {
+    if (!Session.instance.isLoggedIn) return;
+    final cached = await FollowedForumCache.load(
+      account: Session.instance.userName,
+    );
+    if (!mounted || cached.isEmpty) return;
+    if (_forums.isNotEmpty) return;
+    setState(() {
+      _loggedIn = true;
+      _forums = cached;
+    });
+  }
+
   Future<void> _loadAvatar() async {
     if (!Session.instance.isLoggedIn) return;
     try {
@@ -326,21 +349,26 @@ class _HomePageState extends State<HomePage>
                       ),
                       icon: const Icon(Icons.search_rounded),
                     ),
-                    IconButton.filledTonal(
-                      tooltip: _loggedIn ? '账号' : '登录',
-                      onPressed: _openAccount,
-                      icon: _loggedIn && _avatarUrl != null
-                          ? NameAvatar(
-                              name: Session.instance.userName ?? '我',
-                              imageUrl: _avatarUrl,
-                              size: 27,
-                            )
-                          : Icon(
-                              _loggedIn
-                                  ? Icons.account_circle_rounded
-                                  : Icons.account_circle_outlined,
-                            ),
-                    ),
+                    if (_loggedIn && _avatarUrl != null)
+                      IconButton(
+                        tooltip: '账号',
+                        onPressed: _openAccount,
+                        icon: NameAvatar(
+                          name: Session.instance.userName ?? '我',
+                          imageUrl: _avatarUrl,
+                          size: 31,
+                        ),
+                      )
+                    else
+                      IconButton.filledTonal(
+                        tooltip: _loggedIn ? '账号' : '登录',
+                        onPressed: _openAccount,
+                        icon: Icon(
+                          _loggedIn
+                              ? Icons.account_circle_rounded
+                              : Icons.account_circle_outlined,
+                        ),
+                      ),
                   ],
                 ),
               ),
