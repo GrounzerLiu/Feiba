@@ -38,6 +38,12 @@ class _ForumPageState extends State<ForumPage> {
   Uint8List? _avatarBytes;
   String? _paletteUrl;
   Map<int, dynamic> _users = const <int, dynamic>{};
+
+  List<ThreadSummary> get _pinnedThreads =>
+      _threads.where((thread) => thread.isTop).toList(growable: false);
+
+  List<ThreadSummary> get _regularThreads =>
+      _threads.where((thread) => !thread.isTop).toList(growable: false);
   int _page = 1;
   int _sort = 0;
   bool _loading = false;
@@ -392,39 +398,49 @@ class _ForumPageState extends State<ForumPage> {
                       )
                     : const Center(child: Text('这个吧还没有帖子')),
               )
-            else
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-                  child: MasonryGridView.count(
-                    crossAxisCount: columns,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _threads.length,
-                    itemBuilder: (context, index) {
-                      final thread = _threads[index];
-                      final user = _users[thread.authorId];
-                      return ThreadOpenContainer(
-                        closedBuilder: (context, open) => ThreadCard(
-                          thread: thread,
-                          authorName: user?.displayName as String?,
-                          authorAvatar: user?.avatarUrl as String?,
-                          forumName: title,
-                          onTap: open,
-                        ),
-                        openBuilder: (context) => ThreadPage(
-                          tid: thread.tid,
-                          title: thread.title,
-                          forumName: title,
-                          authorName: user?.displayName as String?,
-                        ),
-                      );
-                    },
+            else ...<Widget>[
+              if (_pinnedThreads.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _PinnedThreadList(
+                    threads: _pinnedThreads,
+                    users: _users,
+                    forumName: title,
                   ),
                 ),
-              ),
+              if (_regularThreads.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
+                    child: MasonryGridView.count(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _regularThreads.length,
+                      itemBuilder: (context, index) {
+                        final thread = _regularThreads[index];
+                        final user = _users[thread.authorId];
+                        return ThreadOpenContainer(
+                          closedBuilder: (context, open) => ThreadCard(
+                            thread: thread,
+                            authorName: user?.displayName as String?,
+                            authorAvatar: user?.avatarUrl as String?,
+                            forumName: title,
+                            onTap: open,
+                          ),
+                          openBuilder: (context) => ThreadPage(
+                            tid: thread.tid,
+                            title: thread.title,
+                            forumName: title,
+                            authorName: user?.displayName as String?,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+            ],
             if (_hasMore && _loading)
               const SliverToBoxAdapter(
                 child: Padding(
@@ -616,6 +632,93 @@ class _HeaderMetric extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PinnedThreadList extends StatelessWidget {
+  const _PinnedThreadList({
+    required this.threads,
+    required this.users,
+    required this.forumName,
+  });
+
+  final List<ThreadSummary> threads;
+  final Map<int, dynamic> users;
+  final String forumName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
+      child: Material(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: <Widget>[
+            for (var index = 0; index < threads.length; index++) ...<Widget>[
+              if (index > 0) const Divider(height: 1),
+              ThreadOpenContainer(
+                closedBuilder: (context, open) {
+                  final thread = threads[index];
+                  return InkWell(
+                    onTap: open,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
+                      child: Row(
+                        children: <Widget>[
+                          Container(
+                            width: 34,
+                            height: 20,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              thread.isGood ? '精品' : '置顶',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: Text(
+                              thread.title.isEmpty ? '无标题' : thread.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 17,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                openBuilder: (context) => ThreadPage(
+                  tid: threads[index].tid,
+                  title: threads[index].title,
+                  forumName: forumName,
+                  authorName: users[threads[index].authorId]?.displayName as String?,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
