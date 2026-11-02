@@ -536,6 +536,7 @@ class ProtocolBrowseRepository {
       nameShow: user.nickNameNew,
       portrait: user.portrait,
       levelId: user.level,
+      role: user.bawuType.isEmpty ? null : user.bawuType,
     );
   }
 

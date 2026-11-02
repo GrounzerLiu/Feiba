@@ -713,6 +713,45 @@ class _SheetAction extends StatelessWidget {
   }
 }
 
+String? _roleLabel(String? value) {
+  if (value == null || value.isEmpty) return null;
+  return value == 'manager' || value == '吧主' ? '吧主' : '吧务';
+}
+
+enum _RoleBadgeColor { op, owner, manager }
+
+class _RoleBadge extends StatelessWidget {
+  const _RoleBadge({required this.label, required this.color});
+
+  final String label;
+  final _RoleBadgeColor color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final foreground = switch (color) {
+      _RoleBadgeColor.op => theme.colorScheme.primary,
+      _RoleBadgeColor.owner => theme.colorScheme.error,
+      _RoleBadgeColor.manager => theme.colorScheme.tertiary,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: foreground.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: foreground,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
 class _PostCard extends StatelessWidget {
   const _PostCard({
     required this.post,
@@ -737,6 +776,7 @@ class _PostCard extends StatelessWidget {
     final theme = Theme.of(context);
     final name = author?.displayName ?? '未知用户';
     final time = relativeTime(post.time);
+    final role = _roleLabel(author?.role);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(14, 13, 14, 11),
@@ -783,6 +823,22 @@ class _PostCard extends StatelessWidget {
                           const SizedBox(width: 5),
                           LevelBadge(level: author!.levelId!),
                         ],
+                        if (isOp) ...<Widget>[
+                          const SizedBox(width: 4),
+                          const _RoleBadge(
+                            label: '楼主',
+                            color: _RoleBadgeColor.op,
+                          ),
+                        ],
+                        if (role != null) ...<Widget>[
+                          const SizedBox(width: 4),
+                          _RoleBadge(
+                            label: role,
+                            color: role == '吧主'
+                                ? _RoleBadgeColor.owner
+                                : _RoleBadgeColor.manager,
+                          ),
+                        ],
                       ],
                     ),
                     if (time.isNotEmpty)
@@ -795,40 +851,12 @@ class _PostCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    post.floor > 0 ? '${post.floor}楼' : '',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (isOp) ...<Widget>[
-                    const SizedBox(width: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(
-                          alpha: 0.12,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '楼主',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+              Text(
+                post.floor > 0 ? '${post.floor}楼' : '',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

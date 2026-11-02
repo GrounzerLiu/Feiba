@@ -28,6 +28,7 @@ class TiebaUser {
     this.forumNum = 0,
     this.sign = '',
     this.isBlocked = false,
+    this.bawuType = '',
   });
 
   final int userId;
@@ -55,6 +56,7 @@ class TiebaUser {
   final int forumNum;
   final String sign;
   bool isBlocked;
+  final String bawuType;
 
   bool get isValid => userId != 0;
 
@@ -88,6 +90,7 @@ class TiebaUser {
           if (icon.name.isNotEmpty) icon.name,
       ],
       isBawu: proto.isBawu != 0,
+      bawuType: proto.bawuType,
       isVip: proto.isMem != 0,
       privLike: privSets.like == 0
           ? PrivLike.visible
@@ -124,6 +127,7 @@ class TiebaUser {
       ip: '',
       icons: const <String>[],
       isBawu: false,
+      bawuType: '',
       isVip: false,
       privLike: PrivLike.visible,
       privReply: PrivReply.all,
@@ -152,6 +156,7 @@ class TiebaUser {
             if (parseString(icon['name']).isNotEmpty) parseString(icon['name']),
       ],
       isBawu: parseInt(json['is_bawu']) != 0,
+      bawuType: parseString(json['bawu_type']),
       isVip: parseInt(json['is_mem'] ?? json['is_vip']) != 0,
       privLike: PrivLike.fromValue(parseInt(privMap['like'], 1)),
       privReply: PrivReply.fromValue(parseInt(privMap['reply'], 1)),

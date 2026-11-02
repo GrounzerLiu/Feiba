@@ -6,6 +6,7 @@ class TiebaUser {
     this.nameShow,
     this.portrait,
     this.levelId,
+    this.role,
   });
 
   factory TiebaUser.fromJson(Map<String, dynamic> json) {
@@ -15,6 +16,7 @@ class TiebaUser {
       nameShow: json['name_show']?.toString(),
       portrait: json['portrait']?.toString(),
       levelId: (json['level_id'] as num?)?.toInt(),
+      role: json['bawu_type']?.toString(),
     );
   }
 
@@ -33,6 +35,7 @@ class TiebaUser {
   final String? nameShow;
   final String? portrait;
   final int? levelId;
+  final String? role;
 
   String get displayName => (nameShow != null && nameShow!.isNotEmpty) ? nameShow! : name;
 
