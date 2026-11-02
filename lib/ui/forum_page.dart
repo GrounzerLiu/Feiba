@@ -339,17 +339,43 @@ class _ForumPageState extends State<ForumPage> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
                 child: Row(
                   children: <Widget>[
+                    Text('帖子', style: theme.textTheme.titleMedium),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text('帖子', style: theme.textTheme.titleMedium),
-                    ),
-                    for (var i = 0; i < 3; i++) ...<Widget>[
-                      if (i > 0) const SizedBox(width: 6),
-                      ChoiceChip(
-                        label: Text(<String>['最新回复', '最新发布', '精品'][i]),
-                        selected: _sort == i,
-                        onSelected: (_) => _changeSort(i),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SegmentedButton<int>(
+                            segments: const <ButtonSegment<int>>[
+                              ButtonSegment<int>(
+                                value: 0,
+                                label: Text('最新回复'),
+                              ),
+                              ButtonSegment<int>(
+                                value: 1,
+                                label: Text('最新发布'),
+                              ),
+                              ButtonSegment<int>(
+                                value: 2,
+                                label: Text('精品'),
+                              ),
+                            ],
+                            selected: <int>{_sort},
+                            onSelectionChanged: (values) =>
+                                _changeSort(values.first),
+                            showSelectedIcon: false,
+                            style: const ButtonStyle(
+                              visualDensity: VisualDensity.compact,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                                EdgeInsets.symmetric(horizontal: 10),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
