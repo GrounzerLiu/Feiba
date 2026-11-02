@@ -14,6 +14,7 @@ import 'auth_gate.dart';
 import 'format.dart';
 import 'thread_page.dart';
 import 'forum_ranking_page.dart';
+import 'forum_search_page.dart';
 import 'widgets/thread_open_container.dart';
 import 'widgets/loading_indicator.dart';
 import 'widgets/name_avatar.dart';
@@ -298,6 +299,17 @@ class _ForumPageState extends State<ForumPage> {
               onPressed: _signForum,
               icon: const Icon(Icons.how_to_reg_outlined),
             ),
+          IconButton(
+            tooltip: '吧内搜索',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ForumSearchPage(forumName: title),
+                ),
+              );
+            },
+            icon: const Icon(Icons.search_rounded),
+          ),
           IconButton(
             tooltip: '榜单',
             onPressed: () {

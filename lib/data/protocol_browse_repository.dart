@@ -9,6 +9,7 @@ import '../protocol/api/get_posts.dart';
 import '../protocol/api/get_threads.dart';
 import '../protocol/api/get_user_contents.dart';
 import '../protocol/api/search_global.dart';
+import '../protocol/api/search_in_forum.dart';
 import '../protocol/core/account.dart';
 import '../protocol/core/enums.dart';
 import '../protocol/core/http_core.dart';
@@ -269,6 +270,14 @@ class ProtocolBrowseRepository {
         .where((item) => item.name.isNotEmpty)
         .toList(growable: false);
   }
+
+  Future<TiebaSearchInForums> searchInForum(
+    String fname,
+    String query, {
+    int pn = 1,
+    int rn = 30,
+  }) =>
+      fetchSearchInForum(_core, fname: fname, query: query, pn: pn, rn: rn);
 
   Future<List<SearchGlobal>> searchGlobal(String query, {int pn = 1}) async {
     final page = await fetchSearchGlobal(_core, query: query, pn: pn, rn: 20);
