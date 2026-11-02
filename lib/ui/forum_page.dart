@@ -393,7 +393,6 @@ class _ForumPageState extends State<ForumPage> {
                           title: thread.title,
                           forumName: title,
                           authorName: user?.displayName as String?,
-                          showForumChip: false,
                         ),
                       );
                     },

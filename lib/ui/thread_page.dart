@@ -329,9 +329,8 @@ class _ThreadPageState extends State<ThreadPage> {
   }
 
   Widget _threadHeader(ThemeData theme) {
-    final hasForum = widget.showForumChip &&
-        widget.forumName != null &&
-        widget.forumName!.isNotEmpty;
+    final hasForum =
+        widget.forumName != null && widget.forumName!.isNotEmpty;
     final title = _title.isEmpty ? '帖子' : _title;
     final titleStyle = theme.textTheme.titleLarge?.copyWith(
       fontWeight: FontWeight.w800,
@@ -407,7 +406,7 @@ class _ThreadPageState extends State<ThreadPage> {
             ),
           ),
         ),
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+        padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: kThreadPageMaxWidth),
@@ -415,38 +414,49 @@ class _ThreadPageState extends State<ThreadPage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: <Widget>[
-                  SegmentedButton<bool>(
-                    segments: const <ButtonSegment<bool>>[
-                      ButtonSegment<bool>(
-                        value: false,
-                        label: Text('正序'),
-                        icon: Icon(Icons.arrow_upward_rounded, size: 16),
+                  MenuAnchor(
+                    builder: (context, controller, child) {
+                      return TextButton.icon(
+                        onPressed: () {
+                          if (controller.isOpen) {
+                            controller.close();
+                          } else {
+                            controller.open();
+                          }
+                        },
+                        icon: Icon(
+                          _descending
+                              ? Icons.arrow_downward_rounded
+                              : Icons.arrow_upward_rounded,
+                          size: 18,
+                        ),
+                        label: Text(_descending ? '倒序' : '正序'),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                      );
+                    },
+                    menuChildren: <Widget>[
+                      MenuItemButton(
+                        leadingIcon: const Icon(Icons.arrow_upward_rounded),
+                        onPressed: () => _setOrder(false),
+                        child: const Text('正序'),
                       ),
-                      ButtonSegment<bool>(
-                        value: true,
-                        label: Text('倒序'),
-                        icon: Icon(Icons.arrow_downward_rounded, size: 16),
+                      MenuItemButton(
+                        leadingIcon: const Icon(Icons.arrow_downward_rounded),
+                        onPressed: () => _setOrder(true),
+                        child: const Text('倒序'),
                       ),
                     ],
-                    selected: <bool>{_descending},
-                    onSelectionChanged: (values) => _setOrder(values.first),
-                    showSelectedIcon: false,
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
-                        EdgeInsets.symmetric(horizontal: 10),
-                      ),
-                    ),
                   ),
-                  const SizedBox(width: 8),
                   FilterChip(
                     label: const Text('只看楼主'),
                     selected: _onlyAuthor,
                     onSelected: (_) => _toggleOnlyAuthor(),
                     avatar: const Icon(Icons.person_outline_rounded, size: 16),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   IconButton(
                     tooltip: '回到顶部',
                     visualDensity: VisualDensity.compact,
@@ -688,7 +698,10 @@ class _ThreadHeaderDelegate extends SliverPersistentHeaderDelegate {
                     if (replyNum > 0 || viewNum > 0) ...<Widget>[
                       const SizedBox(height: 7),
                       Text(
-                        '${compactCount(replyNum)} 回复  ·  ${compactCount(viewNum)} 浏览',
+                        <String>[
+                          if (replyNum > 0) '${compactCount(replyNum)} 回复',
+                          if (viewNum > 0) '${compactCount(viewNum)} 浏览',
+                        ].join('  ·  '),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w500,
