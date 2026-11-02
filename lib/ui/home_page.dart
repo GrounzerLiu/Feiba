@@ -39,6 +39,7 @@ class _HomePageState extends State<HomePage>
   bool _pendingLibraryRefresh = false;
   ModalRoute<void>? _subscribedRoute;
   bool _loggedIn = false;
+  String? _avatarUrl;
   String? _error;
   String? _accountWarning;
   List<ForumSummary> _forums = const <ForumSummary>[];
@@ -123,6 +124,7 @@ class _HomePageState extends State<HomePage>
     String? warning;
 
     if (loggedIn) {
+      _loadAvatar();
       try {
         final forums = await TiebaApi.instance.followedForums();
         accountForums.addAll(
@@ -143,6 +145,9 @@ class _HomePageState extends State<HomePage>
       } catch (error) {
         warning = '账号关注同步失败：${tiebaErrorMessage(error)}';
       }
+      if (mounted && accountForums.isNotEmpty) {
+        setState(() => _forums = accountForums);
+      }
       try {
         final users = await TiebaApi.instance.followedUsers();
         accountPeople.addAll(
@@ -157,6 +162,9 @@ class _HomePageState extends State<HomePage>
         );
       } catch (error) {
         warning ??= '关注的人同步失败：${tiebaErrorMessage(error)}';
+      }
+      if (mounted && accountPeople.isNotEmpty) {
+        setState(() => _people = accountPeople);
       }
     }
 
@@ -230,6 +238,17 @@ class _HomePageState extends State<HomePage>
       _loading = false;
       _error = uniqueNames.isEmpty && warning != null ? warning : null;
     });
+  }
+
+  Future<void> _loadAvatar() async {
+    if (!Session.instance.isLoggedIn) return;
+    try {
+      final profile = await TiebaApi.instance.selfProfile();
+      if (!mounted) return;
+      setState(() => _avatarUrl = profile.avatarUrl);
+    } catch (_) {
+      // The account avatar is optional; keep the fallback icon.
+    }
   }
 
   void _openForum(String name) {
@@ -310,11 +329,17 @@ class _HomePageState extends State<HomePage>
                     IconButton.filledTonal(
                       tooltip: _loggedIn ? '账号' : '登录',
                       onPressed: _openAccount,
-                      icon: Icon(
-                        _loggedIn
-                            ? Icons.account_circle_rounded
-                            : Icons.account_circle_outlined,
-                      ),
+                      icon: _loggedIn && _avatarUrl != null
+                          ? NameAvatar(
+                              name: Session.instance.userName ?? '我',
+                              imageUrl: _avatarUrl,
+                              size: 27,
+                            )
+                          : Icon(
+                              _loggedIn
+                                  ? Icons.account_circle_rounded
+                                  : Icons.account_circle_outlined,
+                            ),
                     ),
                   ],
                 ),

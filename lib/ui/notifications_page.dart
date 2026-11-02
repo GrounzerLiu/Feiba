@@ -10,6 +10,7 @@ import 'route_transitions.dart';
 import 'widgets/loading_indicator.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/name_avatar.dart';
+import 'widgets/morphing_shape.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -99,36 +100,63 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     children: <Widget>[
                       Row(
                         children: <Widget>[
-                          Text('消息', style: theme.textTheme.headlineSmall),
-                          if (!loggedIn) ...<Widget>[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(
-                                  alpha: 0.1,
-                                ),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                '游客',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
+                          MorphingShape(
+                            size: 42,
+                            color: theme.colorScheme.primaryContainer,
+                            child: Icon(
+                              Icons.notifications_rounded,
+                              color: theme.colorScheme.onPrimaryContainer,
+                              size: 22,
                             ),
-                          ],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  children: <Widget>[
+                                    Text(
+                                      '消息',
+                                      style: theme.textTheme.headlineSmall,
+                                    ),
+                                    if (!loggedIn) ...<Widget>[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary
+                                              .withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '游客',
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                                color:
+                                                    theme.colorScheme.primary,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '回复、@ 和系统通知都会出现在这里',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '回复、@ 和系统通知都会出现在这里',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
                       ),
                     ],
                   ),

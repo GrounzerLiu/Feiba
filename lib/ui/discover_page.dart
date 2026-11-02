@@ -386,10 +386,10 @@ class _DiscoverPageState extends State<DiscoverPage> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 300,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.6,
+              maxCrossAxisExtent: 320,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              mainAxisExtent: 64,
             ),
             itemCount: _recommended.length,
             itemBuilder: (context, index) {
@@ -660,45 +660,62 @@ class _RecommendedForumCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(16),
+      color: theme.colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Row(
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  ForumAvatar(name: forum.name, repo: repo, size: 34),
-                  const Spacer(),
-                  if (forum.isFollowed)
-                    Icon(
-                      Icons.check_circle_rounded,
-                      size: 16,
-                      color: theme.colorScheme.primary,
+              ForumAvatar(name: forum.name, repo: repo, size: 38),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Flexible(
+                          child: Text(
+                            forum.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        if (forum.isFollowed) ...<Widget>[
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.check_circle_rounded,
+                            size: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ],
+                      ],
                     ),
-                ],
-              ),
-              const Spacer(),
-              Text(
-                forum.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(fontSize: 14),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                forum.memberNum > 0
-                    ? '${compactCount(forum.memberNum)} 成员'
-                    : '进入贴吧',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                    const SizedBox(height: 2),
+                    Text(
+                      forum.memberNum > 0
+                          ? '${compactCount(forum.memberNum)} 成员'
+                          : '进入贴吧',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ],
           ),
