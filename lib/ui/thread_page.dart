@@ -354,11 +354,12 @@ class _ThreadPageState extends State<ThreadPage> {
           onPressed: _copyLink,
           icon: const Icon(Icons.ios_share_rounded),
         ),
+        IconButton(
+          tooltip: '更多',
+          onPressed: _showThreadMenu,
+          icon: const Icon(Icons.more_vert_rounded),
+        ),
       ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(48),
-        child: _threadFilterBar(theme),
-      ),
     );
   }
 
@@ -433,78 +434,42 @@ class _ThreadPageState extends State<ThreadPage> {
     );
   }
 
-  Widget _threadFilterBar(ThemeData theme) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
-          ),
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: <Widget>[
-            MenuAnchor(
-              builder: (context, controller, child) {
-                return TextButton.icon(
-                  onPressed: () {
-                    if (controller.isOpen) {
-                      controller.close();
-                    } else {
-                      controller.open();
-                    }
-                  },
-                  icon: Icon(
-                    _descending
-                        ? Icons.arrow_downward_rounded
-                        : Icons.arrow_upward_rounded,
-                    size: 18,
-                  ),
-                  label: Text(_descending ? '倒序' : '正序'),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                );
-              },
-              menuChildren: <Widget>[
-                MenuItemButton(
-                  leadingIcon: const Icon(Icons.arrow_upward_rounded),
-                  onPressed: () => _setOrder(false),
-                  child: const Text('正序'),
-                ),
-                MenuItemButton(
-                  leadingIcon: const Icon(Icons.arrow_downward_rounded),
-                  onPressed: () => _setOrder(true),
-                  child: const Text('倒序'),
-                ),
-              ],
-            ),
-            FilterChip(
-              label: const Text('只看楼主'),
-              selected: _onlyAuthor,
-              onSelected: (_) => _toggleOnlyAuthor(),
-              avatar: const Icon(Icons.person_outline_rounded, size: 16),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: '回到顶部',
-              visualDensity: VisualDensity.compact,
-              onPressed: _scrollToTop,
-              icon: const Icon(Icons.vertical_align_top_rounded, size: 20),
-            ),
-            IconButton(
-              tooltip: '回到底部',
-              visualDensity: VisualDensity.compact,
-              onPressed: _scrollToBottom,
-              icon: const Icon(Icons.vertical_align_bottom_rounded, size: 20),
-            ),
-          ],
-        ),
-      ),
+  Future<void> _showThreadMenu() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return _ThreadMenuSheet(
+          descending: _descending,
+          onlyAuthor: _onlyAuthor,
+          onToggleOrder: () {
+            Navigator.of(sheetContext).pop();
+            _setOrder(!_descending);
+          },
+          onToggleOnlyAuthor: () {
+            Navigator.of(sheetContext).pop();
+            _toggleOnlyAuthor();
+          },
+          onTop: () {
+            Navigator.of(sheetContext).pop();
+            _scrollToTop();
+          },
+          onBottom: () {
+            Navigator.of(sheetContext).pop();
+            _scrollToBottom();
+          },
+          onShare: () {
+            Navigator.of(sheetContext).pop();
+            _copyLink();
+          },
+          onCopyLink: () {
+            Navigator.of(sheetContext).pop();
+            _copyLink();
+          },
+        );
+      },
     );
   }
 
@@ -593,6 +558,157 @@ class _ThreadPageState extends State<ThreadPage> {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _ThreadMenuSheet extends StatelessWidget {
+  const _ThreadMenuSheet({
+    required this.descending,
+    required this.onlyAuthor,
+    required this.onToggleOrder,
+    required this.onToggleOnlyAuthor,
+    required this.onTop,
+    required this.onBottom,
+    required this.onShare,
+    required this.onCopyLink,
+  });
+
+  final bool descending;
+  final bool onlyAuthor;
+  final VoidCallback onToggleOrder;
+  final VoidCallback onToggleOnlyAuthor;
+  final VoidCallback onTop;
+  final VoidCallback onBottom;
+  final VoidCallback onShare;
+  final VoidCallback onCopyLink;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final actions = <Widget>[
+      _SheetAction(
+        icon: onlyAuthor
+            ? Icons.person_off_outlined
+            : Icons.person_outline_rounded,
+        label: onlyAuthor ? '取消只看楼主' : '只看楼主',
+        selected: onlyAuthor,
+        onTap: onToggleOnlyAuthor,
+      ),
+      _SheetAction(
+        icon: descending
+            ? Icons.arrow_upward_rounded
+            : Icons.arrow_downward_rounded,
+        label: descending ? '切换正序' : '倒序浏览',
+        selected: descending,
+        onTap: onToggleOrder,
+      ),
+      _SheetAction(
+        icon: Icons.vertical_align_top_rounded,
+        label: '回到顶部',
+        onTap: onTop,
+      ),
+      _SheetAction(
+        icon: Icons.vertical_align_bottom_rounded,
+        label: '回到底部',
+        onTap: onBottom,
+      ),
+      _SheetAction(
+        icon: Icons.ios_share_rounded,
+        label: '分享',
+        onTap: onShare,
+      ),
+      _SheetAction(
+        icon: Icons.link_rounded,
+        label: '复制链接',
+        onTap: onCopyLink,
+      ),
+    ];
+
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Text(
+                      '帖子选项',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: '关闭',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: actions.length,
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisExtent: 56,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                      ),
+                  itemBuilder: (context, index) => actions[index],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetAction extends StatelessWidget {
+  const _SheetAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = FilledButton.styleFrom(
+      minimumSize: const Size.fromHeight(52),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+    );
+    if (selected) {
+      return FilledButton.tonalIcon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: style,
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: style,
     );
   }
 }
