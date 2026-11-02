@@ -438,7 +438,6 @@ class _ThreadPageState extends State<ThreadPage> {
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
-      isScrollControlled: true,
       showDragHandle: true,
       builder: (sheetContext) {
         return _ThreadMenuSheet(
@@ -627,6 +626,7 @@ class _ThreadMenuSheet extends StatelessWidget {
 
     return SafeArea(
       child: Center(
+        heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
           child: Padding(
