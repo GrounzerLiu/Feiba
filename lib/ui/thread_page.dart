@@ -312,41 +312,94 @@ class _ThreadPageState extends State<ThreadPage> {
     );
   }
 
-  Widget _threadHeader(ThemeData theme) {
-    final hasForum =
-        widget.forumName != null && widget.forumName!.isNotEmpty;
-    final title = _title.isEmpty ? '帖子' : _title;
-    final titleStyle = theme.textTheme.titleLarge?.copyWith(
-      fontWeight: FontWeight.w800,
-      height: 1.25,
-    );
-    final titlePainter = TextPainter(
-      text: TextSpan(text: title, style: titleStyle),
-      maxLines: 3,
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout(maxWidth: MediaQuery.sizeOf(context).width - 32);
-    final statusHeight = MediaQuery.paddingOf(context).top;
-    final expandedHeight = (statusHeight +
-            64 +
-            titlePainter.height +
-            (hasForum ? 48 : 16) +
-            (_replyNum > 0 || _viewNum > 0 ? 20 : 0))
-        .clamp(statusHeight + 120, statusHeight + 280);
-    return SliverPersistentHeader(
+  Widget _threadAppBar(ThemeData theme) {
+    final hasForum = widget.showForumChip &&
+        widget.forumName != null &&
+        widget.forumName!.isNotEmpty;
+    return SliverAppBar(
       pinned: true,
-      delegate: _ThreadHeaderDelegate(
-        title: title,
-        forumName: hasForum ? widget.forumName : null,
-        statusBarHeight: statusHeight,
-        expandedHeight: expandedHeight,
-        repo: _repo,
-        replyNum: _replyNum,
-        viewNum: _viewNum,
-        isFavorite: LocalLibrary.instance.isFavorite(widget.tid),
-        onFavorite: _toggleFavorite,
-        onShare: _copyLink,
-        onForum: _openForum,
+      centerTitle: true,
+      toolbarHeight: 56,
+      backgroundColor: theme.colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      scrolledUnderElevation: 0,
+      leading: IconButton(
+        tooltip: '返回',
+        onPressed: () => Navigator.of(context).maybePop(),
+        icon: const Icon(Icons.arrow_back_rounded),
+      ),
+      title: hasForum
+          ? ForumChip(
+              name: widget.forumName!,
+              repo: _repo,
+              dense: true,
+              recordVisit: false,
+              onPressed: _openForum,
+            )
+          : const Text('帖子'),
+      actions: <Widget>[
+        IconButton(
+          tooltip: LocalLibrary.instance.isFavorite(widget.tid)
+              ? '取消收藏'
+              : '收藏',
+          onPressed: _toggleFavorite,
+          icon: Icon(
+            LocalLibrary.instance.isFavorite(widget.tid)
+                ? Icons.bookmark_rounded
+                : Icons.bookmark_border_rounded,
+          ),
+        ),
+        IconButton(
+          tooltip: '分享',
+          onPressed: _copyLink,
+          icon: const Icon(Icons.ios_share_rounded),
+        ),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(48),
+        child: _threadFilterBar(theme),
+      ),
+    );
+  }
+
+  Widget _threadTitleBlock(ThemeData theme) {
+    final title = _title.isEmpty ? '帖子' : _title;
+    final stats = <String>[
+      if (_replyNum > 0) '${compactCount(_replyNum)} 回复',
+      if (_viewNum > 0) '${compactCount(_viewNum)} 浏览',
+    ];
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: kThreadPageMaxWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.25,
+                  ),
+                ),
+                if (stats.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 6),
+                  Text(
+                    stats.join('  ·  '),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -380,86 +433,76 @@ class _ThreadPageState extends State<ThreadPage> {
     );
   }
 
-  Widget _threadControls(ThemeData theme) {
-    return SliverToBoxAdapter(
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
-            ),
+  Widget _threadFilterBar(ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
           ),
         ),
-        padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: kThreadPageMaxWidth),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: <Widget>[
-                  MenuAnchor(
-                    builder: (context, controller, child) {
-                      return TextButton.icon(
-                        onPressed: () {
-                          if (controller.isOpen) {
-                            controller.close();
-                          } else {
-                            controller.open();
-                          }
-                        },
-                        icon: Icon(
-                          _descending
-                              ? Icons.arrow_downward_rounded
-                              : Icons.arrow_upward_rounded,
-                          size: 18,
-                        ),
-                        label: Text(_descending ? '倒序' : '正序'),
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                        ),
-                      );
-                    },
-                    menuChildren: <Widget>[
-                      MenuItemButton(
-                        leadingIcon: const Icon(Icons.arrow_upward_rounded),
-                        onPressed: () => _setOrder(false),
-                        child: const Text('正序'),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: const Icon(Icons.arrow_downward_rounded),
-                        onPressed: () => _setOrder(true),
-                        child: const Text('倒序'),
-                      ),
-                    ],
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: <Widget>[
+            MenuAnchor(
+              builder: (context, controller, child) {
+                return TextButton.icon(
+                  onPressed: () {
+                    if (controller.isOpen) {
+                      controller.close();
+                    } else {
+                      controller.open();
+                    }
+                  },
+                  icon: Icon(
+                    _descending
+                        ? Icons.arrow_downward_rounded
+                        : Icons.arrow_upward_rounded,
+                    size: 18,
                   ),
-                  FilterChip(
-                    label: const Text('只看楼主'),
-                    selected: _onlyAuthor,
-                    onSelected: (_) => _toggleOnlyAuthor(),
-                    avatar: const Icon(Icons.person_outline_rounded, size: 16),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    tooltip: '回到顶部',
+                  label: Text(_descending ? '倒序' : '正序'),
+                  style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    onPressed: _scrollToTop,
-                    icon: const Icon(Icons.vertical_align_top_rounded, size: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
-                  IconButton(
-                    tooltip: '回到底部',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _scrollToBottom,
-                    icon: const Icon(
-                      Icons.vertical_align_bottom_rounded,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
+              menuChildren: <Widget>[
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.arrow_upward_rounded),
+                  onPressed: () => _setOrder(false),
+                  child: const Text('正序'),
+                ),
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.arrow_downward_rounded),
+                  onPressed: () => _setOrder(true),
+                  child: const Text('倒序'),
+                ),
+              ],
             ),
-          ),
+            FilterChip(
+              label: const Text('只看楼主'),
+              selected: _onlyAuthor,
+              onSelected: (_) => _toggleOnlyAuthor(),
+              avatar: const Icon(Icons.person_outline_rounded, size: 16),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: '回到顶部',
+              visualDensity: VisualDensity.compact,
+              onPressed: _scrollToTop,
+              icon: const Icon(Icons.vertical_align_top_rounded, size: 20),
+            ),
+            IconButton(
+              tooltip: '回到底部',
+              visualDensity: VisualDensity.compact,
+              onPressed: _scrollToBottom,
+              icon: const Icon(Icons.vertical_align_bottom_rounded, size: 20),
+            ),
+          ],
         ),
       ),
     );
@@ -471,8 +514,8 @@ class _ThreadPageState extends State<ThreadPage> {
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: <Widget>[
-          _threadHeader(theme),
-          _threadControls(theme),
+          _threadAppBar(theme),
+          _threadTitleBlock(theme),
           SliverFillRemaining(
             hasScrollBody: false,
             child: _loading
@@ -503,8 +546,8 @@ class _ThreadPageState extends State<ThreadPage> {
       controller: _scroll,
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: <Widget>[
-        _threadHeader(theme),
-        _threadControls(theme),
+        _threadAppBar(theme),
+        _threadTitleBlock(theme),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
           sliver: SliverList.builder(
@@ -551,167 +594,6 @@ class _ThreadPageState extends State<ThreadPage> {
           ),
       ],
     );
-  }
-}
-
-class _ThreadHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _ThreadHeaderDelegate({
-    required this.title,
-    required this.forumName,
-    required this.statusBarHeight,
-    required this.expandedHeight,
-    required this.repo,
-    required this.replyNum,
-    required this.viewNum,
-    required this.isFavorite,
-    required this.onFavorite,
-    required this.onShare,
-    required this.onForum,
-  });
-
-  final String title;
-  final String? forumName;
-  final double statusBarHeight;
-  final double expandedHeight;
-  final ProtocolBrowseRepository repo;
-  final int replyNum;
-  final int viewNum;
-  final bool isFavorite;
-  final VoidCallback onFavorite;
-  final VoidCallback onShare;
-  final VoidCallback onForum;
-
-  double get _collapsedHeight => statusBarHeight + 64;
-
-  @override
-  double get minExtent => _collapsedHeight;
-
-  @override
-  double get maxExtent => expandedHeight;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    final theme = Theme.of(context);
-    final range = (maxExtent - minExtent).clamp(1.0, double.infinity);
-    final progress = (shrinkOffset / range).clamp(0.0, 1.0);
-    final expandedOpacity = (1 - progress * 1.8).clamp(0.0, 1.0);
-    final collapsedOpacity = ((progress - 0.45) / 0.55).clamp(0.0, 1.0);
-
-    return Material(
-      color: theme.colorScheme.surface,
-      child: ClipRect(
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            Positioned(
-              top: statusBarHeight,
-              left: 0,
-              right: 0,
-              child: SizedBox(
-                height: 64,
-                child: Row(
-                  children: <Widget>[
-                    IconButton(
-                      tooltip: '返回',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                    ),
-                    Expanded(
-                      child: Opacity(
-                        opacity: collapsedOpacity,
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: isFavorite ? '取消收藏' : '收藏',
-                      onPressed: onFavorite,
-                      icon: Icon(
-                        isFavorite
-                            ? Icons.bookmark_rounded
-                            : Icons.bookmark_border_rounded,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: '分享',
-                      onPressed: onShare,
-                      icon: const Icon(Icons.ios_share_rounded),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              top: statusBarHeight + 64,
-              left: 16,
-              right: 16,
-              child: Opacity(
-                opacity: expandedOpacity,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        height: 1.25,
-                      ),
-                    ),
-                    if (forumName != null) ...<Widget>[
-                      const SizedBox(height: 8),
-                      ForumChip(
-                        name: forumName!,
-                        repo: repo,
-                        dense: true,
-                        recordVisit: false,
-                        onPressed: onForum,
-                      ),
-                    ],
-                    if (replyNum > 0 || viewNum > 0) ...<Widget>[
-                      const SizedBox(height: 7),
-                      Text(
-                        <String>[
-                          if (replyNum > 0) '${compactCount(replyNum)} 回复',
-                          if (viewNum > 0) '${compactCount(viewNum)} 浏览',
-                        ].join('  ·  '),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _ThreadHeaderDelegate oldDelegate) {
-    return oldDelegate.title != title ||
-        oldDelegate.forumName != forumName ||
-        oldDelegate.statusBarHeight != statusBarHeight ||
-        oldDelegate.expandedHeight != expandedHeight ||
-        oldDelegate.repo != repo ||
-        oldDelegate.replyNum != replyNum ||
-        oldDelegate.viewNum != viewNum ||
-        oldDelegate.isFavorite != isFavorite;
   }
 }
 
