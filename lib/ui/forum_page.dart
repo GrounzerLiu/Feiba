@@ -649,75 +649,100 @@ class _PinnedThreadList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-      child: Material(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: <Widget>[
-            for (var index = 0; index < threads.length; index++) ...<Widget>[
-              if (index > 0) const Divider(height: 1),
-              ThreadOpenContainer(
-                closedBuilder: (context, open) {
-                  final thread = threads[index];
-                  return InkWell(
-                    onTap: open,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
-                      child: Row(
-                        children: <Widget>[
-                          Container(
-                            width: 34,
-                            height: 20,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              thread.isGood ? '精品' : '置顶',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 9),
-                          Expanded(
-                            child: Text(
-                              thread.title.isEmpty ? '无标题' : thread.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            size: 17,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                openBuilder: (context) => ThreadPage(
-                  tid: threads[index].tid,
-                  title: threads[index].title,
-                  forumName: forumName,
-                  authorName: users[threads[index].authorId]?.displayName as String?,
-                ),
-              ),
-            ],
-          ],
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: threads.length,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 520,
+          mainAxisExtent: 44,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
         ),
+        itemBuilder: (context, index) {
+          final thread = threads[index];
+          return _PinnedThreadTile(
+            thread: thread,
+            user: users[thread.authorId],
+            forumName: forumName,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PinnedThreadTile extends StatelessWidget {
+  const _PinnedThreadTile({
+    required this.thread,
+    required this.user,
+    required this.forumName,
+  });
+
+  final ThreadSummary thread;
+  final dynamic user;
+  final String forumName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ThreadOpenContainer(
+      closedBuilder: (context, open) => Material(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: open,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 7, 6, 7),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 34,
+                  height: 20,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(
+                    thread.isGood ? '精品' : '置顶',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    thread.title.isEmpty ? '无标题' : thread.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 17,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      openBuilder: (context) => ThreadPage(
+        tid: thread.tid,
+        title: thread.title,
+        forumName: forumName,
+        authorName: user?.displayName as String?,
       ),
     );
   }
