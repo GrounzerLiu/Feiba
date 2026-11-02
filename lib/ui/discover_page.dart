@@ -332,7 +332,15 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ThreadGrid(feed: _recommendFeed, repo: _repo),
             if (_loadingMore)
               const LoadingIndicator(minHeight: 72)
-            else if (!_recommendFeed.hasMore)
+            else if (_recommendFeed.hasMore)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => _loadRecommend(more: true),
+                  icon: const Icon(Icons.expand_more_rounded),
+                  label: const Text('加载更多'),
+                ),
+              )
+            else
               const SizedBox(height: 8),
           ],
         ],
@@ -433,7 +441,15 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   ),
                 ),
             if (_loadingHotMore)
-              const LoadingIndicator(minHeight: 70),
+              const LoadingIndicator(minHeight: 70)
+            else if (_hotMoreTabs.isNotEmpty)
+              Center(
+                child: TextButton.icon(
+                  onPressed: _loadHotMore,
+                  icon: const Icon(Icons.expand_more_rounded),
+                  label: const Text('加载更多'),
+                ),
+              ),
           ],
         ],
       ),

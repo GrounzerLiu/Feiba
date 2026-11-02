@@ -14,6 +14,7 @@ import '../protocol/core/enums.dart';
 import '../protocol/core/http_core.dart';
 import '../protocol/core/utils.dart';
 import '../protocol/models/comment.dart' as protocol_comment;
+import '../protocol/models/recommend.dart';
 import '../protocol/models/contents.dart' as protocol_contents;
 import '../protocol/models/forum.dart' as protocol_forum;
 import '../protocol/models/homepage.dart' as protocol_homepage;
@@ -275,34 +276,47 @@ class ProtocolBrowseRepository {
   }
 
   Future<ThreadFeed> personalizedFeed({int page = 1}) async {
-    var source = Session.instance.isLoggedIn
-        ? await TiebaApi.instance.personalizedThreads(page: page)
-        : await fetchPersonalized(_core, page: page);
+    var source = <protocol_thread.TiebaThread>[];
     var usedFallback = false;
+
+    if (Session.instance.isLoggedIn) {
+      try {
+        source = await TiebaApi.instance
+            .personalizedThreads(page: page)
+            .timeout(const Duration(seconds: 6));
+      } catch (_) {
+        source = <protocol_thread.TiebaThread>[];
+      }
+    }
 
     if (source.isEmpty && page == 1) {
       usedFallback = true;
-      // Guest/empty recommendations fall back to the public hot list rather
-      // than showing an empty tab. Merge the hot sub-boards so the masonry
-      // wall has more than the four entries of the "all" board.
       final first = await fetchHotThreads(_core);
       final merged = <protocol_thread.TiebaThread>[...first.threads];
-      for (final tab in first.tabs) {
-        if (tab.code == 'all') continue;
-        try {
-          final board = await fetchHotThreads(_core, tabCode: tab.code);
-          merged.addAll(board.threads);
-        } catch (_) {
-          // One sub-board failure should not hide the rest.
-        }
+      final extraTabs = first.tabs
+          .where((tab) => tab.code != 'all')
+          .toList(growable: false);
+      final pages = await Future.wait(
+        extraTabs.map((tab) async {
+          try {
+            return await fetchHotThreads(_core, tabCode: tab.code);
+          } catch (_) {
+            return const HotThreadPage(
+              topics: <RecommendTopic>[],
+              tabs: <HotThreadTab>[],
+              threads: <protocol_thread.TiebaThread>[],
+            );
+          }
+        }),
+      );
+      for (final page in pages) {
+        merged.addAll(page.threads);
       }
       final seen = <int>{};
       source = merged
           .where((thread) => thread.tid != 0 && seen.add(thread.tid))
           .take(20)
           .toList(growable: false);
-    } else if (source.isEmpty && page > 1) {
-      source = const <protocol_thread.TiebaThread>[];
     }
 
     final users = <int, TiebaUser>{};
