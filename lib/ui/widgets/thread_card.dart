@@ -11,6 +11,7 @@ import '../../data/protocol_browse_repository.dart';
 import '../format.dart';
 import 'forum_chip.dart';
 import 'name_avatar.dart';
+import 'video_thumb.dart';
 
 class ThreadCard extends StatelessWidget {
   const ThreadCard({
@@ -38,6 +39,13 @@ class ThreadCard extends StatelessWidget {
     final images = thread.content
         .where((ContentNode n) => n.isImage && n.imageUrl != null)
         .toList(growable: false);
+    ContentNode? video;
+    for (final node in thread.content) {
+      if (node.isVideo) {
+        video = node;
+        break;
+      }
+    }
     final preview = thread.preview.trim();
     final name = authorName?.isNotEmpty == true
         ? authorName!
@@ -118,6 +126,10 @@ class ThreadCard extends StatelessWidget {
               if (images.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 10),
                 _ImageStrip(nodes: images),
+              ],
+              if (video != null) ...<Widget>[
+                const SizedBox(height: 10),
+                VideoThumb(node: video, maxWidth: 320, maxHeight: 220),
               ],
               const SizedBox(height: 10),
               Row(

@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../data/models/content_node.dart';
 import '../data/models/feed.dart';
 import '../data/models/forum_page.dart';
 import '../data/models/hot_board.dart';
@@ -16,6 +17,7 @@ import 'widgets/loading_indicator.dart';
 import 'widgets/morphing_shape.dart';
 import 'widgets/name_avatar.dart';
 import 'widgets/thread_grid.dart';
+import 'widgets/video_thumb.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key, this.loadFeed = true});
@@ -582,6 +584,13 @@ class _HotThreadCard extends StatelessWidget {
     final theme = Theme.of(context);
     final name = author?.displayName ?? '贴吧用户';
     final heat = thread.hotNum > 0 ? thread.hotNum : thread.viewNum;
+    ContentNode? video;
+    for (final node in thread.content) {
+      if (node.isVideo) {
+        video = node;
+        break;
+      }
+    }
     return Material(
       color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(16),
@@ -653,6 +662,10 @@ class _HotThreadCard extends StatelessWidget {
                     height: 1.45,
                   ),
                 ),
+              ],
+              if (video != null) ...<Widget>[
+                const SizedBox(height: 8),
+                VideoThumb(node: video, maxWidth: 300, maxHeight: 170),
               ],
               const SizedBox(height: 8),
               Row(
