@@ -303,22 +303,6 @@ class _ThreadPageState extends State<ThreadPage> {
                           : Icons.favorite_border_rounded,
                     ),
                   ),
-                  IconButton(
-                    tooltip: LocalLibrary.instance.isFavorite(widget.tid)
-                        ? '取消收藏'
-                        : '收藏',
-                    onPressed: _toggleFavorite,
-                    icon: Icon(
-                      LocalLibrary.instance.isFavorite(widget.tid)
-                          ? Icons.bookmark_rounded
-                          : Icons.bookmark_border_rounded,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: '分享',
-                    onPressed: _copyLink,
-                    icon: const Icon(Icons.ios_share_rounded),
-                  ),
                 ],
               ),
             ),
