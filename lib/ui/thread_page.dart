@@ -55,6 +55,8 @@ class _ThreadPageState extends State<ThreadPage> {
   bool _descending = false;
   bool _onlyAuthor = false;
   int? _opAuthorId;
+  int _replyNum = 0;
+  int _viewNum = 0;
   String _title = '';
 
   @override
@@ -123,6 +125,8 @@ class _ThreadPageState extends State<ThreadPage> {
         _posts.addAll(data.posts);
         _users = data.users;
         if (data.title.isNotEmpty) _title = data.title;
+        if (data.replyNum > 0) _replyNum = data.replyNum;
+        if (data.viewNum > 0) _viewNum = data.viewNum;
         _hasMore = data.hasMore;
         _page += 1;
         if (_opAuthorId == null &&
@@ -299,6 +303,22 @@ class _ThreadPageState extends State<ThreadPage> {
                           : Icons.favorite_border_rounded,
                     ),
                   ),
+                  IconButton(
+                    tooltip: LocalLibrary.instance.isFavorite(widget.tid)
+                        ? '取消收藏'
+                        : '收藏',
+                    onPressed: _toggleFavorite,
+                    icon: Icon(
+                      LocalLibrary.instance.isFavorite(widget.tid)
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '分享',
+                    onPressed: _copyLink,
+                    icon: const Icon(Icons.ios_share_rounded),
+                  ),
                 ],
               ),
             ),
@@ -324,8 +344,12 @@ class _ThreadPageState extends State<ThreadPage> {
       textScaler: MediaQuery.textScalerOf(context),
     )..layout(maxWidth: MediaQuery.sizeOf(context).width - 32);
     final statusHeight = MediaQuery.paddingOf(context).top;
-    final expandedHeight = (statusHeight + 64 + titlePainter.height + (hasForum ? 48 : 16))
-        .clamp(statusHeight + 120, statusHeight + 260);
+    final expandedHeight = (statusHeight +
+            64 +
+            titlePainter.height +
+            (hasForum ? 48 : 16) +
+            (_replyNum > 0 || _viewNum > 0 ? 20 : 0))
+        .clamp(statusHeight + 120, statusHeight + 280);
     return SliverPersistentHeader(
       pinned: true,
       delegate: _ThreadHeaderDelegate(
@@ -334,6 +358,8 @@ class _ThreadPageState extends State<ThreadPage> {
         statusBarHeight: statusHeight,
         expandedHeight: expandedHeight,
         repo: _repo,
+        replyNum: _replyNum,
+        viewNum: _viewNum,
         isFavorite: LocalLibrary.instance.isFavorite(widget.tid),
         onFavorite: _toggleFavorite,
         onShare: _copyLink,
@@ -373,44 +399,71 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Widget _threadControls(ThemeData theme) {
     return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: kThreadPageMaxWidth),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                ChoiceChip(
-                  label: const Text('正序'),
-                  selected: !_descending,
-                  onSelected: (_) => _setOrder(false),
-                ),
-                ChoiceChip(
-                  label: const Text('倒序'),
-                  selected: _descending,
-                  onSelected: (_) => _setOrder(true),
-                ),
-                FilterChip(
-                  label: const Text('只看楼主'),
-                  selected: _onlyAuthor,
-                  onSelected: (_) => _toggleOnlyAuthor(),
-                ),
-                IconButton(
-                  tooltip: '回到顶部',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _scrollToTop,
-                  icon: const Icon(Icons.vertical_align_top_rounded, size: 20),
-                ),
-                IconButton(
-                  tooltip: '回到底部',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _scrollToBottom,
-                  icon: const Icon(Icons.vertical_align_bottom_rounded, size: 20),
-                ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: <Widget>[
+                  SegmentedButton<bool>(
+                    segments: const <ButtonSegment<bool>>[
+                      ButtonSegment<bool>(
+                        value: false,
+                        label: Text('正序'),
+                        icon: Icon(Icons.arrow_upward_rounded, size: 16),
+                      ),
+                      ButtonSegment<bool>(
+                        value: true,
+                        label: Text('倒序'),
+                        icon: Icon(Icons.arrow_downward_rounded, size: 16),
+                      ),
+                    ],
+                    selected: <bool>{_descending},
+                    onSelectionChanged: (values) => _setOrder(values.first),
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                        EdgeInsets.symmetric(horizontal: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: const Text('只看楼主'),
+                    selected: _onlyAuthor,
+                    onSelected: (_) => _toggleOnlyAuthor(),
+                    avatar: const Icon(Icons.person_outline_rounded, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: '回到顶部',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _scrollToTop,
+                    icon: const Icon(Icons.vertical_align_top_rounded, size: 20),
+                  ),
+                  IconButton(
+                    tooltip: '回到底部',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _scrollToBottom,
+                    icon: const Icon(
+                      Icons.vertical_align_bottom_rounded,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -514,6 +567,8 @@ class _ThreadHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.statusBarHeight,
     required this.expandedHeight,
     required this.repo,
+    required this.replyNum,
+    required this.viewNum,
     required this.isFavorite,
     required this.onFavorite,
     required this.onShare,
@@ -525,6 +580,8 @@ class _ThreadHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double statusBarHeight;
   final double expandedHeight;
   final ProtocolBrowseRepository repo;
+  final int replyNum;
+  final int viewNum;
   final bool isFavorite;
   final VoidCallback onFavorite;
   final VoidCallback onShare;
@@ -628,6 +685,16 @@ class _ThreadHeaderDelegate extends SliverPersistentHeaderDelegate {
                         onPressed: onForum,
                       ),
                     ],
+                    if (replyNum > 0 || viewNum > 0) ...<Widget>[
+                      const SizedBox(height: 7),
+                      Text(
+                        '${compactCount(replyNum)} 回复  ·  ${compactCount(viewNum)} 浏览',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -645,6 +712,8 @@ class _ThreadHeaderDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.statusBarHeight != statusBarHeight ||
         oldDelegate.expandedHeight != expandedHeight ||
         oldDelegate.repo != repo ||
+        oldDelegate.replyNum != replyNum ||
+        oldDelegate.viewNum != viewNum ||
         oldDelegate.isFavorite != isFavorite;
   }
 }
@@ -679,6 +748,9 @@ class _PostCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

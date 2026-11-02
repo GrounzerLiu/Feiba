@@ -321,6 +321,8 @@ class ProtocolBrowseRepository {
       currentPage: page.page.currentPage,
       totalPage: page.page.totalPage,
       hasMore: page.hasMore,
+      replyNum: page.thread.replyNum,
+      viewNum: page.thread.viewNum,
     );
   }
 

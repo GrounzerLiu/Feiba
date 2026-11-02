@@ -112,6 +112,8 @@ class ThreadPageData {
     this.currentPage = 1,
     this.totalPage = 1,
     this.hasMore = false,
+    this.replyNum = 0,
+    this.viewNum = 0,
   });
 
   final List<PostItem> posts;
@@ -120,6 +122,8 @@ class ThreadPageData {
   final int currentPage;
   final int totalPage;
   final bool hasMore;
+  final int replyNum;
+  final int viewNum;
 
   TiebaUser? userOf(int id) => users[id];
 }
