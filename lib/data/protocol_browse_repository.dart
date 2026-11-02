@@ -278,7 +278,10 @@ class ProtocolBrowseRepository {
     var source = Session.instance.isLoggedIn
         ? await TiebaApi.instance.personalizedThreads(page: page)
         : await fetchPersonalized(_core, page: page);
-    if (source.isEmpty) {
+    var usedFallback = false;
+
+    if (source.isEmpty && page == 1) {
+      usedFallback = true;
       // Guest/empty recommendations fall back to the public hot list rather
       // than showing an empty tab. Merge the hot sub-boards so the masonry
       // wall has more than the four entries of the "all" board.
@@ -287,8 +290,8 @@ class ProtocolBrowseRepository {
       for (final tab in first.tabs) {
         if (tab.code == 'all') continue;
         try {
-          final page = await fetchHotThreads(_core, tabCode: tab.code);
-          merged.addAll(page.threads);
+          final board = await fetchHotThreads(_core, tabCode: tab.code);
+          merged.addAll(board.threads);
         } catch (_) {
           // One sub-board failure should not hide the rest.
         }
@@ -298,7 +301,10 @@ class ProtocolBrowseRepository {
           .where((thread) => thread.tid != 0 && seen.add(thread.tid))
           .take(20)
           .toList(growable: false);
+    } else if (source.isEmpty && page > 1) {
+      source = const <protocol_thread.TiebaThread>[];
     }
+
     final users = <int, TiebaUser>{};
     final threads = <ThreadSummary>[];
     for (final thread in source) {
@@ -306,7 +312,11 @@ class ProtocolBrowseRepository {
       if (user != null) users[user.userId] = _mapUser(user);
       threads.add(_mapThread(thread));
     }
-    return ThreadFeed(threads: threads, users: users);
+    return ThreadFeed(
+      threads: threads,
+      users: users,
+      hasMore: !usedFallback && page < 3 && threads.length >= 10,
+    );
   }
 
   Future<HotBoard> hotBoard({String tabCode = 'all'}) async {

@@ -28,39 +28,103 @@ class DiscoverPage extends StatefulWidget {
 
 class _DiscoverPageState extends State<DiscoverPage> {
   final ProtocolBrowseRepository _repo = ProtocolBrowseRepository();
+  final ScrollController _recommendScroll = ScrollController();
+  final ScrollController _hotScroll = ScrollController();
 
   ThreadFeed _recommendFeed = ThreadFeed.empty;
   HotBoard? _hotBoard;
   bool _loadingRecommend = false;
+  bool _loadingMore = false;
   bool _loadingHot = false;
+  bool _loadingHotMore = false;
   String? _recommendError;
   String? _hotError;
   String _hotTab = 'all';
+  List<String> _hotMoreTabs = <String>[];
+  int _recommendPage = 1;
 
   @override
   void initState() {
     super.initState();
+    _recommendScroll.addListener(_onRecommendScroll);
+    _hotScroll.addListener(_onHotScroll);
     if (widget.loadFeed) {
       _loadRecommend();
       _loadHot(_hotTab);
     }
   }
 
-  Future<void> _loadRecommend() async {
-    if (!widget.loadFeed || _loadingRecommend) return;
+  @override
+  void dispose() {
+    _recommendScroll.dispose();
+    _hotScroll.dispose();
+    super.dispose();
+  }
+
+  void _onRecommendScroll() {
+    if (!_recommendScroll.hasClients) return;
+    final position = _recommendScroll.position;
+    if (position.pixels >= position.maxScrollExtent - 240) {
+      _loadRecommend(more: true);
+    }
+  }
+
+  void _onHotScroll() {
+    if (!_hotScroll.hasClients) return;
+    final position = _hotScroll.position;
+    if (position.pixels >= position.maxScrollExtent - 240) {
+      _loadHotMore();
+    }
+  }
+
+  Future<void> _loadRecommend({bool more = false}) async {
+    if (!widget.loadFeed || _loadingRecommend || _loadingMore) return;
+    if (more && !_recommendFeed.hasMore) return;
+    final page = more ? _recommendPage + 1 : 1;
     setState(() {
-      _loadingRecommend = true;
       _recommendError = null;
+      if (more) {
+        _loadingMore = true;
+      } else {
+        _loadingRecommend = true;
+      }
     });
     try {
-      final feed = await _repo.personalizedFeed();
+      final feed = await _repo.personalizedFeed(page: page);
       if (!mounted) return;
-      setState(() => _recommendFeed = feed);
+      setState(() {
+        if (!more) {
+          _recommendFeed = feed;
+          _recommendPage = 1;
+          return;
+        }
+        final seen = <int>{
+          for (final thread in _recommendFeed.threads) thread.tid,
+        };
+        final threads = <ThreadSummary>[..._recommendFeed.threads];
+        for (final thread in feed.threads) {
+          if (seen.add(thread.tid)) threads.add(thread);
+        }
+        _recommendFeed = ThreadFeed(
+          threads: threads,
+          users: <int, TiebaUser>{
+            ..._recommendFeed.users,
+            ...feed.users,
+          },
+          hasMore: feed.hasMore,
+        );
+        _recommendPage = page;
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() => _recommendError = error.toString());
     } finally {
-      if (mounted) setState(() => _loadingRecommend = false);
+      if (mounted) {
+        setState(() {
+          _loadingRecommend = false;
+          _loadingMore = false;
+        });
+      }
     }
   }
 
@@ -74,7 +138,13 @@ class _DiscoverPageState extends State<DiscoverPage> {
     try {
       final board = await _repo.hotBoard(tabCode: tabCode);
       if (!mounted) return;
-      setState(() => _hotBoard = board);
+      setState(() {
+        _hotBoard = board;
+        _hotMoreTabs = board.tabs
+            .map((tab) => tab.code)
+            .where((code) => code != tabCode && code != 'all')
+            .toList(growable: false);
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() => _hotError = error.toString());
@@ -84,6 +154,45 @@ class _DiscoverPageState extends State<DiscoverPage> {
   }
 
   Future<void> _refreshHot() => _loadHot(_hotTab);
+
+  Future<void> _loadHotMore() async {
+    if (_loadingHot || _loadingHotMore || _hotMoreTabs.isEmpty) return;
+    final code = _hotMoreTabs.first;
+    final current = _hotBoard;
+    if (current == null) return;
+    setState(() {
+      _loadingHotMore = true;
+      _hotMoreTabs = _hotMoreTabs.sublist(1);
+    });
+    try {
+      final page = await _repo.hotBoard(tabCode: code);
+      if (!mounted) return;
+      final seen = <int>{
+        for (final thread in current.feed.threads) thread.tid,
+      };
+      final threads = <ThreadSummary>[...current.feed.threads];
+      for (final thread in page.feed.threads) {
+        if (seen.add(thread.tid)) threads.add(thread);
+      }
+      setState(() {
+        _hotBoard = HotBoard(
+          feed: ThreadFeed(
+            threads: threads,
+            users: <int, TiebaUser>{
+              ...current.feed.users,
+              ...page.feed.users,
+            },
+          ),
+          topics: current.topics,
+          tabs: current.tabs,
+        );
+      });
+    } catch (_) {
+      // A failed extra board keeps the current ranking visible.
+    } finally {
+      if (mounted) setState(() => _loadingHotMore = false);
+    }
+  }
 
   void _openForum(String name) {
     Navigator.of(context).push(
@@ -200,8 +309,9 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
   Widget _recommendTab(ThemeData theme) {
     return RefreshIndicator(
-      onRefresh: _loadRecommend,
+      onRefresh: () => _loadRecommend(),
       child: ListView(
+        controller: _recommendScroll,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: <Widget>[
@@ -218,8 +328,13 @@ class _DiscoverPageState extends State<DiscoverPage> {
             _ErrorCard(message: _recommendError!, onRetry: _loadRecommend)
           else if (_recommendFeed.threads.isEmpty)
             const _EmptyCard(text: '暂时没有推荐帖子。')
-          else
+          else ...<Widget>[
             ThreadGrid(feed: _recommendFeed, repo: _repo),
+            if (_loadingMore)
+              const LoadingIndicator(minHeight: 72)
+            else if (!_recommendFeed.hasMore)
+              const SizedBox(height: 8),
+          ],
         ],
       ),
     );
@@ -230,6 +345,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
     return RefreshIndicator(
       onRefresh: _refreshHot,
       child: ListView(
+        controller: _hotScroll,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: <Widget>[
@@ -316,6 +432,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     onForumTap: _openForum,
                   ),
                 ),
+            if (_loadingHotMore)
+              const LoadingIndicator(minHeight: 70),
           ],
         ],
       ),
