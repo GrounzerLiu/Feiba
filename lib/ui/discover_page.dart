@@ -327,22 +327,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Text(
-                '按兴趣推荐的帖子',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-              if (_recommendFeed.hasMore && !_loadingMore)
-                TextButton.icon(
-                  onPressed: () => _loadRecommend(more: true),
-                  icon: const Icon(Icons.expand_more_rounded, size: 18),
-                  label: const Text('加载更多'),
-                ),
-            ],
+          Text(
+            '按兴趣推荐的帖子',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           if (_loadingRecommend && _recommendFeed.threads.isEmpty)
@@ -439,22 +428,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 ),
               ),
             const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Text(
-                  '按内容热度排序',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const Spacer(),
-                if (_hotMoreTabs.isNotEmpty && !_loadingHotMore)
-                  TextButton.icon(
-                    onPressed: _loadHotMore,
-                    icon: const Icon(Icons.expand_more_rounded, size: 18),
-                    label: const Text('加载更多'),
-                  ),
-              ],
+            Text(
+              '按内容热度排序',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 6),
             if (_loadingHot && board.feed.threads.isEmpty)
